@@ -1,4 +1,24 @@
-# Recipe Passport verification handoff — PASS
+# Recipe Passport review handoff — FAIL
+
+Completed 28 August 2026 for work order recipe-passport-review-1. This review
+made no product-code changes. It added .factory/review-1.md and replaced this
+handoff only.
+
+The review cold-opened the deployed site in fresh 390 px and desktop browser
+contexts; verified the one-click demo, reset, storage isolation, same-origin
+network flow, and live offline reload; read all prior verification/handoff
+history; crawled discovered routes/assets; and ran all public claim commands
+from a fresh clone at 76d373b. All 12 claims passed, as did full npm test
+(5 unit / 24 browser tests) and the production build, which created dist/.
+
+**Remaining work:** the review is FAIL due to the missing HTTP 404,
+route-inaccurate Open Graph/Twitter metadata, and three unregistered README
+claims. See .factory/review-1.md for exact evidence and fixes. No deployment
+or product implementation change was made by this reviewer.
+
+---
+
+# Prior Recipe Passport verification handoff — PASS
 
 Independent verification completed 28 August 2026 for candidate
 `4c67a47953813f36af3d47d669193f914e55054b` at
