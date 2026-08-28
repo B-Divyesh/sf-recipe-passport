@@ -1,6 +1,6 @@
 import './styles.css';
 import { metadataForPath } from './metadata';
-import { clearDemo, downloadCookbook, loadRecipes, normalizeRecipe, parseRecipeJson, removeRecipe, resetDemo, searchRecipes, upsertRecipes } from './recipes';
+import { clearDemo, downloadCookbook, loadRecipes, normalizeRecipe, parsePastedRecipe, parseRecipeJson, removeRecipe, resetDemo, searchRecipes, upsertRecipes } from './recipes';
 import type { AppMode, Recipe } from './types';
 
 declare const __BUILD_SHA__: string;
@@ -36,6 +36,15 @@ function routePath(path: string, mode = modeFromPath()): string {
     return `/demo${path}`;
   }
   return path;
+}
+
+function recipePath(id: string, mode: AppMode): string {
+  // The route is a real, server-known static document. The locally held ID is
+  // data, not part of a wildcard URL that a static host cannot validate.
+  if (mode === 'demo' && ['sample-braised-beans', 'sample-lemon-cake', 'sample-noodle-salad'].includes(id)) {
+    return `/demo/recipe/${encodeURIComponent(id)}`;
+  }
+  return `${mode === 'demo' ? '/demo/recipe' : '/recipe'}?id=${encodeURIComponent(id)}`;
 }
 
 function navigate(path: string, replace = false): void {
@@ -82,7 +91,7 @@ function footer(): string {
     <footer class="site-footer">
       <div>
         <a class="footer-brand" href="/" data-link>${logo}<span>Keep recipes. Keep control.</span></a>
-        <p>Generated editorial imagery. No tracking or remote fonts.</p>
+        <p>Artwork generated for Recipe Passport. No tracking. No fonts load from other sites.</p>
       </div>
       <nav aria-label="Footer navigation">
         <a href="/privacy" data-link>Privacy</a>
@@ -119,14 +128,14 @@ function landing(): string {
   return `
     <section class="hero" aria-labelledby="landing-title">
       <div class="hero-copy">
-        <p class="eyebrow">A local recipe archive</p>
+        <p class="eyebrow">A cookbook on this device</p>
         <h1 id="landing-title">Move your recipes into a private cookbook.</h1>
         <p class="lede">For cooks leaving an app or cluttered recipe page, it keeps a searchable copy on this device.</p>
         <div class="hero-actions">
           <a class="button primary" href="/?demo=1" data-link>Try it with sample data</a>
           <a class="button secondary" href="/add" data-link>Import your recipes</a>
         </div>
-        <p class="action-note">The sample opens a ready-made cookbook. Import accepts Paprika JSON or a pasted recipe.</p>
+        <p class="action-note">The sample opens a ready-made cookbook. Import a Paprika file or paste one full recipe.</p>
         <ul class="plain-facts" aria-label="Product facts">
           <li><span aria-hidden="true">●</span> Stays on this device</li>
           <li><span aria-hidden="true">●</span> Works offline after the first visit</li>
@@ -168,9 +177,9 @@ function landing(): string {
         <h2 id="how-title">Carry recipes across in three steps.</h2>
       </div>
       <ol class="steps-list">
-        <li><span>01</span><div><h3>Import</h3><p>Choose a Paprika JSON file or paste your recipe.</p></div></li>
+        <li><span>01</span><div><h3>Import recipes</h3><p>Choose a Paprika JSON file or paste one full recipe.</p></div></li>
         <li><span>02</span><div><h3>Cook</h3><p>Search by title or ingredient. Open a clean cooking view.</p></div></li>
-        <li><span>03</span><div><h3>Take it with you</h3><p>Print one recipe or export the whole cookbook as JSON.</p></div></li>
+        <li><span>03</span><div><h3>Print or export your cookbook</h3><p>Print one recipe or export the whole cookbook as JSON.</p></div></li>
       </ol>
     </section>
     <section class="limits-section" aria-labelledby="limits-title">
@@ -190,7 +199,7 @@ function recipeCard(recipe: Recipe, mode: AppMode): string {
   const categories = recipe.categories.slice(0, 2).map(escapeHtml).join(' · ');
   return `
     <article class="recipe-card">
-      <a class="card-link" href="${routePath(`/recipe/${encodeURIComponent(recipe.id)}`, mode)}" data-link aria-label="Open ${escapeHtml(recipe.title)}">
+      <a class="card-link" href="${recipePath(recipe.id, mode)}" data-link aria-label="Open ${escapeHtml(recipe.title)}">
         <p class="recipe-kicker">${categories || 'Saved recipe'}</p>
         <h2>${escapeHtml(recipe.title)}</h2>
         <p>${escapeHtml(recipe.yield || `${recipe.ingredients.length} ingredients`)}</p>
@@ -224,7 +233,7 @@ function cookbook(mode: AppMode): string {
         <div class="empty-state">
           <div class="empty-folio" aria-hidden="true">＋</div>
           <h2>Your recipes will appear here.</h2>
-          <p>Import a Paprika JSON file or paste your first recipe.</p>
+          <p>Import a Paprika JSON file or paste your first full recipe.</p>
           <a class="button primary" href="${routePath('/add', mode)}" data-link>Add your first recipe</a>
         </div>`}
     </section>`;
@@ -241,11 +250,11 @@ function recipeForm(mode: AppMode): string {
       <div class="page-heading narrow">
         <p class="eyebrow">Bring your own recipes</p>
         <h1 id="add-title">${existing ? 'Edit this recipe.' : 'Add recipes to your cookbook.'}</h1>
-        <p class="page-intro">${existing ? 'Changes stay in this browser.' : 'Import a JSON export or paste one recipe below.'}</p>
+        <p class="page-intro">${existing ? 'Changes stay in this browser.' : 'Import a JSON export or paste one full recipe below.'}</p>
       </div>
       ${existing ? '' : `
         <section class="import-panel" aria-labelledby="import-title">
-          <div><p class="section-number">01</p><h2 id="import-title">Import Paprika JSON</h2><p>Choose an unencrypted JSON file. You can import one recipe, an array, or a previous Recipe Passport export.</p></div>
+          <div><p class="section-number">01</p><h2 id="import-title">Import Paprika JSON</h2><p>Choose an unencrypted Paprika JSON export or a previous Recipe Passport export.</p></div>
           <div class="file-picker">
             <label class="button primary" for="json-file">Choose JSON file</label>
             <input id="json-file" type="file" accept="application/json,.json" />
@@ -254,7 +263,8 @@ function recipeForm(mode: AppMode): string {
           <p class="form-status" id="import-status" role="status"></p>
         </section>`}
       <section class="manual-panel" aria-labelledby="manual-title">
-        <div class="manual-heading"><p class="section-number">${existing ? 'Recipe' : '02'}</p><h2 id="manual-title">${existing ? 'Recipe details' : 'Paste one recipe'}</h2></div>
+        <div class="manual-heading"><p class="section-number">${existing ? 'Recipe' : '02'}</p><h2 id="manual-title">${existing ? 'Recipe details' : 'Paste a full recipe'}</h2></div>
+        ${existing ? '' : `<div class="paste-panel"><label for="full-recipe">Paste full recipe text</label><textarea id="full-recipe" rows="10" placeholder="Lemon olive oil cake\nServes 8\n\nIngredients\n200 g flour\n\nMethod\nWhisk the batter.\nBake until golden."></textarea><p>Recipe Passport fills the editable fields from a title, Ingredients, and Method section. Nothing is sent anywhere.</p><button class="button secondary" type="button" data-action="parse-paste">Fill recipe fields from paste</button><p class="form-status" id="paste-status" role="status"></p></div>`}
         <form id="recipe-form" novalidate data-edit-id="${existing ? escapeHtml(existing.id) : ''}">
           <div class="field full"><label for="title">Recipe title <span>required</span></label><input id="title" name="title" required value="${v('title')}" autocomplete="off" /></div>
           <div class="field"><label for="yield">Yield</label><input id="yield" name="yield" value="${v('yield')}" placeholder="Serves 4" /></div>
@@ -343,10 +353,12 @@ function render(shouldFocus = false): void {
   } else if (path === '/terms') {
     content = policyPage('terms');
   } else {
-    const match = path.match(/^\/(demo\/)?recipe\/([^/]+)$/);
-    if (match) {
-      const recipeMode: AppMode = match[1] ? 'demo' : 'real';
-      const recipe = loadRecipes(recipeMode).find((item) => item.id === decodeURIComponent(match[2]));
+    const staticDemoRecipe = path.match(/^\/demo\/recipe\/([^/]+)$/);
+    const queryRecipeRoute = path === '/recipe' || path === '/demo/recipe';
+    if (staticDemoRecipe || queryRecipeRoute) {
+      const recipeMode: AppMode = staticDemoRecipe || path === '/demo/recipe' ? 'demo' : 'real';
+      const recipeId = staticDemoRecipe ? decodeURIComponent(staticDemoRecipe[1]) : new URLSearchParams(location.search).get('id') ?? '';
+      const recipe = loadRecipes(recipeMode).find((item) => item.id === recipeId);
       if (recipe) {
         content = recipePage(recipe, recipeMode); recipeTitle = recipe.title;
       } else {
@@ -358,7 +370,7 @@ function render(shouldFocus = false): void {
   }
 
   app.innerHTML = shell(content, mode);
-  const metadata = metadataForPath(path, recipeTitle);
+  const metadata = metadataForPath(path, recipeTitle, recipeTitle && new URLSearchParams(location.search).get('id') ? `${path}${location.search}` : undefined);
   setMetadata(metadata.title, metadata.description, metadata.canonicalPath);
   bindEvents();
   if (shouldFocus) {
@@ -391,6 +403,22 @@ function bindActionButtons(root: ParentNode = document): void {
         clearDemo(); navigate('/add');
       } else if (action === 'export') {
         downloadCookbook(loadRecipes(modeFromPath())); showToast('Cookbook JSON downloaded.');
+      } else if (action === 'parse-paste') {
+        const pasted = document.querySelector<HTMLTextAreaElement>('#full-recipe');
+        const status = document.querySelector<HTMLElement>('#paste-status');
+        try {
+          const recipe = parsePastedRecipe(pasted?.value ?? '');
+          const set = (id: string, value: string) => {
+            const field = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`#${id}`);
+            if (field) field.value = value;
+          };
+          set('title', recipe.title); set('yield', recipe.yield); set('ingredients', recipe.ingredients.join('\n'));
+          set('steps', recipe.steps.join('\n')); set('notes', recipe.notes); set('sourceName', recipe.sourceName); set('categories', recipe.categories.join(', '));
+          if (status) { status.className = 'form-status success'; status.textContent = 'Recipe fields filled. Review them, then add your recipe.'; }
+          document.querySelector<HTMLInputElement>('#title')?.focus();
+        } catch (error) {
+          if (status) { status.className = 'form-status error'; status.textContent = error instanceof Error ? error.message : 'This paste could not be read. Fill the fields below.'; }
+        }
       } else if (action === 'print') {
         window.print();
       } else if (action === 'delete') {
@@ -475,7 +503,7 @@ function bindEvents(): void {
         updatedAt: new Date().toISOString(),
       }, 'Manual entry');
       upsertRecipes(modeFromPath(), [recipe]);
-      navigate(routePath(`/recipe/${encodeURIComponent(recipe.id)}`));
+      navigate(recipePath(recipe.id, modeFromPath()));
       showToast(existing ? 'Recipe saved.' : 'Recipe added.');
     } catch (caught) {
       if (error) error.textContent = caught instanceof Error ? caught.message : 'This recipe could not be saved. Check the fields and try again.';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cookbookExport, normalizeRecipe, parseRecipeJson, searchRecipes } from '../../src/recipes';
+import { cookbookExport, normalizeRecipe, parsePastedRecipe, parseRecipeJson, searchRecipes } from '../../src/recipes';
 
 const paprika = {
   uid: 'paprika-one',
@@ -42,5 +42,25 @@ describe('recipe normalization', () => {
   it('gives useful errors for malformed input', () => {
     expect(() => parseRecipeJson('{nope')).toThrow('not valid JSON');
     expect(() => normalizeRecipe({ name: 'Untested' })).toThrow('no ingredients');
+  });
+});
+
+describe('one-paste recipe intake', () => {
+  it('fills editable fields from title, Ingredients, and Method sections', () => {
+    expect(parsePastedRecipe(`Lemon rice
+Serves 3
+
+Ingredients
+1 cup rice
+1 lemon
+
+Method
+Cook the rice.
+Fold in lemon.`)).toMatchObject({
+      title: 'Lemon rice',
+      yield: 'Serves 3',
+      ingredients: ['1 cup rice', '1 lemon'],
+      steps: ['Cook the rice.', 'Fold in lemon.'],
+    });
   });
 });

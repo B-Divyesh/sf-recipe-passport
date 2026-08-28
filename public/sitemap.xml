@@ -4,6 +4,10 @@
   <url><loc>https://recipe-passport.sociobot.in/demo</loc></url>
   <url><loc>https://recipe-passport.sociobot.in/cookbook</loc></url>
   <url><loc>https://recipe-passport.sociobot.in/add</loc></url>
+  <url><loc>https://recipe-passport.sociobot.in/demo/add</loc></url>
+  <url><loc>https://recipe-passport.sociobot.in/demo/recipe/sample-braised-beans</loc></url>
+  <url><loc>https://recipe-passport.sociobot.in/demo/recipe/sample-lemon-cake</loc></url>
+  <url><loc>https://recipe-passport.sociobot.in/demo/recipe/sample-noodle-salad</loc></url>
   <url><loc>https://recipe-passport.sociobot.in/privacy</loc></url>
   <url><loc>https://recipe-passport.sociobot.in/terms</loc></url>
 </urlset>

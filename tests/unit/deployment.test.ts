@@ -21,7 +21,8 @@ describe('static deployment policy', () => {
     };
     expect(config.navigationFallback).toBeUndefined();
     expect(config.routes).toContainEqual({ route: '/demo', rewrite: '/demo/index.html' });
-    expect(config.routes).toContainEqual({ route: '/recipe/*', rewrite: '/index.html' });
+    expect(config.routes).toContainEqual({ route: '/recipe', rewrite: '/recipe/index.html' });
+    expect(config.routes.some((route) => route.route.includes('*recipe'))).toBe(false);
     expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html', statusCode: 404 });
     expect(readFileSync(resolve(process.cwd(), 'public/404.html'), 'utf8')).toContain('Return home');
   });

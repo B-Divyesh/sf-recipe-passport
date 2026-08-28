@@ -25,11 +25,9 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (event.request.mode === 'navigate') {
-    event.respondWith(fetch(event.request).then((response) => {
-      const copy = response.clone();
-      caches.open(CACHE).then((cache) => cache.put('/index.html', copy));
-      return response;
-    }).catch(() => caches.match('/index.html')));
+    // The shell is populated at install. Never replace it with a response from
+    // an arbitrary URL: a routine 404 must not poison offline app navigation.
+    event.respondWith(fetch(event.request).catch(() => caches.match('/index.html')));
     return;
   }
 

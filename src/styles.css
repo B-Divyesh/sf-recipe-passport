@@ -28,6 +28,7 @@ img { display: block; max-width: 100%; }
 h1, h2, h3, p { margin-top: 0; }
 h1, h2, h3 { font-family: var(--display); font-weight: 500; line-height: 1.04; letter-spacing: -0.025em; }
 h1 { max-width: 14ch; font-size: clamp(2.6rem, 7vw, 5.4rem); margin-bottom: 24px; }
+.hero h1 { font-size: clamp(2.6rem, 5.5vw, 4.7rem); }
 h2 { font-size: clamp(2rem, 4vw, 3.5rem); }
 h3 { font-size: 1.55rem; }
 button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline: 3px solid var(--mustard); outline-offset: 3px; }
@@ -49,8 +50,8 @@ main h1[tabindex="-1"]:focus { outline: 0; }
 .banner-button { min-height: 44px; padding: 8px 14px; color: var(--night-text); border: 1px solid #97b0a9; border-radius: 8px; background: transparent; cursor: pointer; }
 .banner-button-light { color: var(--night); background: var(--cream); border-color: var(--cream); }
 
-.hero { max-width: 1280px; min-height: 700px; margin: auto; display: grid; grid-template-columns: minmax(340px, .82fr) minmax(500px, 1.18fr); align-items: center; gap: 24px; padding: 64px 32px 88px; }
-.hero-copy { position: relative; z-index: 2; padding-left: max(0px, calc((100vw - 1200px) / 2)); }
+.hero { max-width: 1280px; min-height: 620px; margin: auto; display: grid; grid-template-columns: minmax(340px, .82fr) minmax(500px, 1.18fr); align-items: center; gap: 24px; padding: 40px 32px 48px; }
+.hero-copy { position: relative; z-index: 2; padding-left: max(0px, calc((100vw - 1200px) / 2)); transform: translateY(-40px); }
 .eyebrow, .recipe-kicker, .section-number { margin-bottom: 14px; font-size: .76rem; font-weight: 800; line-height: 1.2; letter-spacing: .14em; text-transform: uppercase; color: var(--tomato-dark); }
 .lede { max-width: 52ch; margin-bottom: 28px; font-size: 1.18rem; color: var(--ink-muted); }
 .hero-actions, .toolbar, .recipe-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
@@ -62,7 +63,7 @@ main h1[tabindex="-1"]:focus { outline: 0; }
 .button.secondary { color: var(--ink); background: transparent; }
 .button.secondary:hover { background: var(--paper-deep); }
 .button:disabled { opacity: .55; cursor: not-allowed; transform: none; }
-.action-note { max-width: 50ch; margin: 16px 0 24px; font-size: .88rem; color: var(--ink-muted); }
+.action-note { max-width: 50ch; margin: 16px 0 8px; font-size: .88rem; color: var(--ink-muted); }
 .plain-facts { display: flex; flex-wrap: wrap; gap: 10px 20px; padding: 0; margin: 0; list-style: none; font-size: .82rem; font-weight: 700; }
 .plain-facts span { color: var(--herb); margin-right: 4px; }
 .hero-art { position: relative; isolation: isolate; }
@@ -138,6 +139,12 @@ main h1[tabindex="-1"]:focus { outline: 0; }
 .manual-panel { padding-top: 48px; border-top: 1px solid var(--ink); }
 .manual-heading { margin-bottom: 32px; }
 .manual-heading h2 { font-size: 2.4rem; }
+.paste-panel { display: grid; gap: 10px; max-width: 720px; margin: 0 0 40px; padding: 24px; background: var(--paper-deep); border-left: 5px solid var(--tomato); }
+.paste-panel label { font-weight: 800; }
+.paste-panel textarea { width: 100%; padding: 12px 14px; color: var(--ink); background: var(--cream); border: 1px solid #6f7975; border-radius: 7px; resize: vertical; }
+.paste-panel p { max-width: 62ch; margin: 0; color: var(--ink-muted); font-size: .92rem; }
+.paste-panel .form-status { min-height: 0; font-weight: 700; }
+.paste-panel .button { justify-self: start; }
 #recipe-form { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field.full, .form-actions.full, .form-error.full { grid-column: 1 / -1; }
@@ -195,7 +202,7 @@ main h1[tabindex="-1"]:focus { outline: 0; }
 
 @media (max-width: 900px) {
   .hero { grid-template-columns: 1fr; padding-top: 48px; }
-  .hero-copy { padding-left: 0; }
+  .hero-copy { padding-left: 0; transform: none; }
   .hero-art { margin-top: 32px; }
   .recipe-grid { grid-template-columns: repeat(2, 1fr); }
   .split-heading, .recipe-header { align-items: start; flex-direction: column; }
@@ -236,6 +243,8 @@ main h1[tabindex="-1"]:focus { outline: 0; }
   .recipe-grid { grid-template-columns: 1fr; }
   .card-link { min-height: 280px; }
   .import-panel { grid-template-columns: 1fr; padding: 28px 20px; }
+  .paste-panel { padding: 20px; }
+  .paste-panel .button { width: 100%; }
   #recipe-form { grid-template-columns: 1fr; }
   .field, .field.full, .form-actions.full, .form-error.full { grid-column: 1; }
   .recipe-body { grid-template-columns: 1fr; }

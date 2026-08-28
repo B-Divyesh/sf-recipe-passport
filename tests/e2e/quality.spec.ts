@@ -31,6 +31,25 @@ test('serves a real styled HTTP 404 with a working return path', async ({ page }
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Move your recipes into a private cookbook.');
 });
 
+test('returns HTTP 404 and not-found metadata for unknown recipe URL paths', async ({ page }) => {
+  for (const route of ['/recipe/not-a-real-recipe', '/demo/recipe/not-a-real-recipe']) {
+    const response = await page.goto(route);
+    expect(response?.status()).toBe(404);
+    await expect(page).toHaveTitle('Not found — Recipe Passport');
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://recipe-passport.sociobot.in/404');
+  }
+});
+
+test('reloads a stored recipe from the real query route', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.setItem('recipe-passport:v1:recipes', JSON.stringify([{
+    id: 'saved-route-test', title: 'Stored route soup', yield: 'Serves 2', categories: [], ingredients: ['1 onion'], steps: ['Cook it.'], notes: '', sourceName: '', sourceUrl: '', createdAt: '2026-08-28T00:00:00.000Z', updatedAt: '2026-08-28T00:00:00.000Z',
+  }])));
+  const response = await page.goto('/recipe?id=saved-route-test');
+  expect(response?.status()).toBe(200);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Stored route soup');
+});
+
 test('serves and maintains route-accurate share metadata', async ({ page }) => {
   const routes = [
     ['/demo', 'Demo — Recipe Passport'],
@@ -68,6 +87,21 @@ test('opens the isolated query demo in one click and can reset it', async ({ pag
   await expect(page.getByText('3 recipes')).toBeVisible();
   await expect(page.getByLabel('Search your cookbook')).toHaveValue('');
   expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBeNull();
+});
+
+test('keeps the action outcome and all three facts in the desktop first screen', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  for (const item of [
+    page.getByText('The sample opens a ready-made cookbook.'),
+    page.getByText('Stays on this device'),
+    page.getByText('Works offline after the first visit'),
+    page.getByText('Price: free'),
+  ]) {
+    const box = await item.boundingBox();
+    expect(box).not.toBeNull();
+    expect((box?.y ?? 900) + (box?.height ?? 1)).toBeLessThanOrEqual(900);
+  }
 });
 
 test('works with a keyboard and keeps every required touch target at 390 CSS pixels', async ({ page }) => {
@@ -135,8 +169,8 @@ test('shows useful empty and import error states', async ({ page }) => {
     mimeType: 'application/json',
     buffer: Buffer.from('{not valid'),
   });
-  await expect(page.getByRole('status')).toContainText('not valid JSON');
-  await expect(page.getByRole('status')).toContainText('Choose an unencrypted Paprika JSON export');
+  await expect(page.locator('#import-status')).toContainText('not valid JSON');
+  await expect(page.locator('#import-status')).toContainText('Choose an unencrypted Paprika JSON export');
 });
 
 test('@claim:recipe-management edits, deletes, and restores a recipe', async ({ page }) => {

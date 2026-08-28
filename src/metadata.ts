@@ -36,6 +36,16 @@ export const staticRouteMetadata: Record<string, RouteMetadata> = {
     description: 'Try adding or importing a recipe without changing your real cookbook.',
     canonicalPath: '/demo/add',
   },
+  '/recipe': {
+    title: 'Recipe — Recipe Passport',
+    description: 'Read a recipe stored in this browser.',
+    canonicalPath: '/recipe',
+  },
+  '/demo/recipe': {
+    title: 'Sample recipe — Recipe Passport',
+    description: 'Read a sample recipe without changing your cookbook.',
+    canonicalPath: '/demo/recipe',
+  },
   '/privacy': {
     title: 'Privacy — Recipe Passport',
     description: 'How Recipe Passport stores recipe data in your browser.',
@@ -58,8 +68,15 @@ export const staticRouteMetadata: Record<string, RouteMetadata> = {
   }])),
 };
 
-export function metadataForPath(path: string, recipeTitle?: string): RouteMetadata {
+export function metadataForPath(path: string, recipeTitle?: string, recipeCanonicalPath?: string): RouteMetadata {
   const normalized = path.replace(/\/$/, '') || '/';
+  if (recipeTitle && (normalized === '/recipe' || normalized === '/demo/recipe')) {
+    return {
+      title: `${recipeTitle} — Recipe Passport`,
+      description: `Ingredients and method for ${recipeTitle}.`,
+      canonicalPath: recipeCanonicalPath ?? normalized,
+    };
+  }
   const known = staticRouteMetadata[normalized];
   if (known) return known;
   if (recipeTitle) {

@@ -46,12 +46,12 @@ test('does not report success or navigate when a valid 5.6 MB import cannot pers
     mimeType: 'application/json',
     buffer: Buffer.from(payload),
   });
-  await expect(page.getByRole('status')).toContainText('browser storage is full');
-  await expect(page.getByRole('status')).not.toContainText('Imported');
+  await expect(page.locator('#import-status')).toContainText('browser storage is full');
+  await expect(page.locator('#import-status')).not.toContainText('Imported');
   await expect(page).toHaveURL(/\/add$/);
   expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBeNull();
   await page.reload();
-  await expect(page.getByRole('status')).toHaveText('');
+  await expect(page.locator('#import-status')).toHaveText('');
 });
 
 test('rejects a JSON file above the documented 10 MB import limit before reading it', async ({ page }) => {
@@ -61,7 +61,7 @@ test('rejects a JSON file above the documented 10 MB import limit before reading
     mimeType: 'application/json',
     buffer: Buffer.alloc(10 * 1024 * 1024 + 1, 0),
   });
-  await expect(page.getByRole('status')).toContainText('larger than 10 MB');
+  await expect(page.locator('#import-status')).toContainText('larger than 10 MB');
   await expect(page).toHaveURL(/\/add$/);
 });
 
@@ -73,24 +73,58 @@ test('@claim:manual-add saves a pasted structured recipe', async ({ page }) => {
   await page.getByLabel(/Steps/).fill('Char the corn.\nDress with lime.\nScatter with coriander.');
   await page.getByLabel('Notes').fill('Serve at room temperature.');
   await page.getByRole('button', { name: 'Add recipe' }).click();
-  await expect(page).toHaveURL(/\/recipe\//);
+  await expect(page).toHaveURL(/\/recipe\?id=/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Charred corn salad');
   await expect(page.getByText('4 corn cobs')).toBeVisible();
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('recipe-passport:v1:recipes') ?? '[]'))).toHaveLength(1);
 });
 
+test('@claim:paste-recipe fills editable fields from one full pasted recipe', async ({ page }) => {
+  await page.goto('/add');
+  await page.getByLabel('Paste full recipe text').fill(`Midnight tomato soup
+Serves 4
+
+Ingredients
+2 tablespoons olive oil
+800 g tomatoes
+1 pinch salt
+
+Method
+Warm the oil.
+Simmer the tomatoes for 20 minutes.
+Blend until smooth.
+
+Notes
+Finish with basil.`);
+  await page.getByRole('button', { name: 'Fill recipe fields from paste' }).click();
+  await expect(page.locator('#paste-status')).toContainText('Recipe fields filled');
+  await expect(page.getByLabel(/Recipe title/)).toHaveValue('Midnight tomato soup');
+  await expect(page.getByLabel('Yield')).toHaveValue('Serves 4');
+  await expect(page.getByLabel(/Ingredients/)).toHaveValue('2 tablespoons olive oil\n800 g tomatoes\n1 pinch salt');
+  await expect(page.getByLabel(/Steps/)).toHaveValue('Warm the oil.\nSimmer the tomatoes for 20 minutes.\nBlend until smooth.');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Midnight tomato soup');
+});
+
 test('@claim:search-cookbook searches by ingredient', async ({ page }) => {
   await page.goto('/demo');
   const search = page.getByLabel('Search your cookbook');
-  for (const query of ['tahini', 'Baking', 'yogurt', 'Family recipe card', 'Lemon olive oil cake']) {
+  for (const [query, title] of [
+    ['tahini', 'Cold sesame noodle salad'],
+    ['Baking', 'Lemon olive oil cake'],
+    ['yogurt', 'Tomato-braised butter beans'],
+    ['Family recipe card', 'Lemon olive oil cake'],
+    ['Lemon olive oil cake', 'Lemon olive oil cake'],
+  ]) {
     await search.fill(query);
     await expect(page.getByText('1 recipe')).toBeVisible();
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
   }
-  await expect(page.getByRole('heading', { name: 'Lemon olive oil cake' })).toBeVisible();
 });
 
 test('@claim:json-export downloads every demo recipe as JSON', async ({ page }) => {
   await page.goto('/demo');
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('demo:recipe-passport:v1:recipes') ?? '[]'));
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export cookbook' }).click();
   const download = await downloadPromise;
@@ -102,6 +136,7 @@ test('@claim:json-export downloads every demo recipe as JSON', async ({ page }) 
   expect(Object.keys(data.recipes[0]).sort()).toEqual([
     'categories', 'createdAt', 'id', 'ingredients', 'notes', 'sourceName', 'sourceUrl', 'steps', 'title', 'updatedAt', 'yield',
   ]);
+  expect(data.recipes).toEqual(saved);
 });
 
 test('@claim:print-recipe opens the browser print flow', async ({ page }) => {
@@ -111,12 +146,18 @@ test('@claim:print-recipe opens the browser print flow', async ({ page }) => {
   await expect(page.locator('body')).toHaveAttribute('data-printed', 'yes');
 });
 
-test('@claim:offline-reload reloads the demo without a network', async ({ page, context }) => {
+test('@claim:offline-reload reloads the demo and a fresh app route after a 404 without a network', async ({ page, context }) => {
   await page.goto('/demo');
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Find a recipe you already own.' })).toBeVisible();
+  await context.setOffline(false);
+  const missing = await page.goto('/missing-offline-shell');
+  expect(missing?.status()).toBe(404);
   await context.setOffline(true);
+  await page.goto('/add');
+  await expect(page.getByRole('heading', { name: 'Add recipes to your cookbook.' })).toBeVisible();
+  await page.goto('/demo');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Tomato-braised butter beans' })).toBeVisible();
   await context.setOffline(false);
@@ -136,6 +177,9 @@ test('@claim:local-only makes no third-party request and keeps real storage empt
 });
 
 test('@claim:demo-isolation discards demo changes before real use', async ({ page }) => {
+  const sentinel = JSON.stringify([{ id: 'real-sentinel', title: 'Keep my real cookbook' }]);
+  await page.goto('/');
+  await page.evaluate((value) => localStorage.setItem('recipe-passport:v1:recipes', value), sentinel);
   await page.goto('/demo/add');
   await page.getByLabel(/Recipe title/).fill('Temporary demo soup');
   await page.getByLabel(/Ingredients/).fill('1 onion');
@@ -148,7 +192,7 @@ test('@claim:demo-isolation discards demo changes before real use', async ({ pag
     demo: sessionStorage.getItem('demo:recipe-passport:v1:recipes'),
     real: localStorage.getItem('recipe-passport:v1:recipes'),
   }));
-  expect(values).toEqual({ demo: null, real: null });
+  expect(values).toEqual({ demo: null, real: sentinel });
 });
 
 test('@claim:free-use @claim:no-account presents no price or account gate', async ({ page }) => {

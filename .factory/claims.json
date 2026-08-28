@@ -14,6 +14,13 @@
     "sandbox": "fresh browser context; complete the manual form and assert the saved recipe"
   },
   {
+    "id": "paste-recipe",
+    "claim": "Fills editable recipe fields from one pasted recipe with a title, Ingredients, and Method section.",
+    "where": "landing page, add page, README",
+    "test": "npm test -- --grep @claim:paste-recipe",
+    "sandbox": "fresh browser context; paste a complete recipe into the one-paste input; assert title, yield, ingredients, and steps fill locally, then save"
+  },
+  {
     "id": "search-cookbook",
     "claim": "Searches saved recipes by title, ingredient, category, note, or source.",
     "where": "landing page, cookbook page, README",

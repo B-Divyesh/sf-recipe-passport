@@ -28,4 +28,11 @@ Each recipe has a yield, ingredients, method, notes, categories, and source prov
 - **Start for real** deletes the demo key and opens the real add-recipe screen.
 - Navigating from demo mode to a non-demo route also deletes the demo key.
 
-The sample data and app shell are available to the service worker, so the offline claim can be checked entirely inside this sandbox. Every build gives that cache a commit-specific version, so an update fetches a new shell rather than reusing a prior release.
+The sample data and app shell are available to the service worker, so the offline claim can be checked entirely inside this sandbox. The worker precaches its shell and never replaces it with a navigation response, so a 404 cannot break a later offline route. Every build gives that cache a commit-specific version, so an update fetches a new shell rather than reusing a prior release.
+
+## Recipe links
+
+The three shipped sample recipes have fixed `/demo/recipe/<sample-id>` URLs.
+Recipes saved in a browser use the real static `/recipe?id=<id>` or
+`/demo/recipe?id=<id>` route. This keeps unknown path URLs honest HTTP 404s on
+a static host while allowing a saved local recipe to reload from its address.

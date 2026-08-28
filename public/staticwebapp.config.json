@@ -12,13 +12,13 @@
     { "route": "/add", "rewrite": "/add/index.html" },
     { "route": "/demo", "rewrite": "/demo/index.html" },
     { "route": "/demo/add", "rewrite": "/demo/add/index.html" },
+    { "route": "/recipe", "rewrite": "/recipe/index.html" },
+    { "route": "/demo/recipe", "rewrite": "/demo/recipe/index.html" },
     { "route": "/privacy", "rewrite": "/privacy/index.html" },
     { "route": "/terms", "rewrite": "/terms/index.html" },
     { "route": "/demo/recipe/sample-braised-beans", "rewrite": "/demo/recipe/sample-braised-beans/index.html" },
     { "route": "/demo/recipe/sample-lemon-cake", "rewrite": "/demo/recipe/sample-lemon-cake/index.html" },
-    { "route": "/demo/recipe/sample-noodle-salad", "rewrite": "/demo/recipe/sample-noodle-salad/index.html" },
-    { "route": "/demo/recipe/*", "rewrite": "/demo/index.html" },
-    { "route": "/recipe/*", "rewrite": "/index.html" }
+    { "route": "/demo/recipe/sample-noodle-salad", "rewrite": "/demo/recipe/sample-noodle-salad/index.html" }
   ],
   "responseOverrides": {
     "404": { "rewrite": "/404.html", "statusCode": 404 }

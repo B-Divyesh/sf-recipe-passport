@@ -21,8 +21,6 @@ function resolveRequest(pathname) {
   if (existsSync(direct) && statSync(direct).isFile()) return { file: direct, status: 200 };
   const directoryIndex = join(direct, 'index.html');
   if (existsSync(directoryIndex)) return { file: directoryIndex, status: 200 };
-  if (/^\/demo\/recipe\/[^/]+$/.test(decoded)) return { file: join(root, 'demo/index.html'), status: 200 };
-  if (/^\/recipe\/[^/]+$/.test(decoded)) return { file: join(root, 'index.html'), status: 200 };
   return { file: join(root, '404.html'), status: 404 };
 }
 

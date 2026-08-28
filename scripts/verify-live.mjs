@@ -28,6 +28,15 @@ try {
   }
   if (await page.evaluate(() => document.body.scrollWidth) !== 390) throw new Error('The mobile page overflows horizontally.');
 
+  const desktopContext = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const desktop = await desktopContext.newPage();
+  await desktop.goto(`${base}/`, { waitUntil: 'networkidle' });
+  for (const text of ['The sample opens a ready-made cookbook.', 'Stays on this device', 'Works offline after the first visit', 'Price: free']) {
+    const box = await desktop.getByText(text).boundingBox();
+    if (!box || box.y + box.height > 900) throw new Error(`Desktop first-screen item is below the fold: ${text}`);
+  }
+  await desktopContext.close();
+
   const demoLink = page.getByRole('link', { name: 'Try it with sample data' });
   if (await demoLink.getAttribute('href') !== '/?demo=1') throw new Error('The first action is not the query demo entry.');
   await demoLink.click();
@@ -45,10 +54,21 @@ try {
 
   await page.evaluate(async () => { await navigator.serviceWorker.ready; });
   await page.reload();
+  const poisoned = await page.goto(`${base}/missing-offline-shell`);
+  if (poisoned?.status() !== 404) throw new Error('The offline regression setup did not receive an HTTP 404.');
   await context.setOffline(true);
+  await page.goto(`${base}/add`);
+  await page.getByRole('heading', { name: 'Add recipes to your cookbook.' }).waitFor();
+  await page.goto(`${base}/demo`);
   await page.reload();
   await page.getByRole('heading', { name: 'Tomato-braised butter beans' }).waitFor();
   await context.setOffline(false);
+
+  await page.goto(`${base}/add`);
+  await page.getByLabel('Paste full recipe text').fill(`Quick tomato soup\nServes 2\n\nIngredients\n2 tomatoes\n1 onion\n\nMethod\nCook the onion.\nBlend the soup.`);
+  await page.getByRole('button', { name: 'Fill recipe fields from paste' }).click();
+  if (await page.getByLabel(/Recipe title/).inputValue() !== 'Quick tomato soup') throw new Error('One-paste intake did not fill the title.');
+  if (await page.getByLabel(/Ingredients/).inputValue() !== '2 tomatoes\n1 onion') throw new Error('One-paste intake did not fill ingredients.');
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export cookbook' }).click();
@@ -129,8 +149,12 @@ try {
 
   const notFoundContext = await browser.newContext();
   const notFoundPage = await notFoundContext.newPage();
-  const notFoundResponse = await notFoundPage.goto(`${base}/missing-page`);
-  if (notFoundResponse?.status() !== 404) throw new Error('Unknown live URL did not return HTTP 404.');
+  for (const route of ['/missing-page', '/recipe/not-a-real-recipe', '/demo/recipe/not-a-real-recipe']) {
+    const notFoundResponse = await notFoundPage.goto(`${base}${route}`);
+    if (notFoundResponse?.status() !== 404) throw new Error(`Unknown live URL did not return HTTP 404: ${route}`);
+    if (await notFoundPage.title() !== 'Not found — Recipe Passport') throw new Error(`Unknown route has wrong 404 metadata: ${route}`);
+  }
+  await notFoundPage.goto(`${base}/missing-page`);
   await notFoundPage.getByRole('link', { name: 'Return home' }).click();
   if (new URL(notFoundPage.url()).pathname !== '/') throw new Error('The live 404 return link failed.');
   await notFoundContext.close();

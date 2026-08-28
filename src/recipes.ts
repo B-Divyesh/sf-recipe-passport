@@ -77,6 +77,43 @@ export function parseRecipeJson(raw: string, importedFrom = 'Paprika JSON import
   return candidates.map((candidate) => normalizeRecipe(candidate, importedFrom));
 }
 
+/**
+ * Pull the useful parts from a recipe a cook has copied from a page or note.
+ * This deliberately stays local and conservative: it fills the editable form,
+ * rather than pretending to understand prose that it cannot safely identify.
+ */
+export function parsePastedRecipe(raw: string): Pick<Recipe, 'title' | 'ingredients' | 'steps' | 'yield' | 'notes' | 'sourceName' | 'categories'> {
+  const pasted = raw.replace(/\r/g, '').split('\n').map((line) => line.trim()).filter(Boolean);
+  const heading = (line: string, pattern: RegExp) => pattern.test(line.replace(/:$/, '').trim());
+  const ingredientsAt = pasted.findIndex((line) => heading(line, /^ingredients?$/i));
+  const methodAt = pasted.findIndex((line) => heading(line, /^(method|instructions?|directions)$/i));
+  const title = pasted.find((line, index) => index < (ingredientsAt === -1 ? pasted.length : ingredientsAt) && !/^(yield|serves|makes|source|categories?)\s*:/i.test(line)) ?? '';
+
+  if (!title || ingredientsAt === -1 || methodAt === -1 || methodAt <= ingredientsAt + 1) {
+    throw new Error('Paste a title plus Ingredients and Method headings, then fill any missing fields below.');
+  }
+
+  const beforeIngredients = pasted.slice(0, ingredientsAt);
+  const afterMethod = pasted.slice(methodAt + 1);
+  const firstSectionEnd = afterMethod.findIndex((line) => heading(line, /^(notes?|source|categories?)$/i));
+  const methodLines = firstSectionEnd === -1 ? afterMethod : afterMethod.slice(0, firstSectionEnd);
+  const findValue = (pattern: RegExp) => pasted.find((line) => pattern.test(line))?.replace(pattern, '').trim() ?? '';
+  const notesAt = pasted.findIndex((line) => heading(line, /^notes?$/i));
+  const sourceAt = pasted.findIndex((line) => heading(line, /^source$/i));
+  const categoriesAt = pasted.findIndex((line) => heading(line, /^categories?$/i));
+  const valueAfterHeading = (index: number) => index === -1 ? '' : (pasted[index + 1] ?? '');
+
+  return {
+    title,
+    ingredients: lines(pasted.slice(ingredientsAt + 1, methodAt)),
+    steps: lines(methodLines),
+    yield: findValue(/^(yield|serves|makes)\s*:\s*/i) || beforeIngredients.find((line) => /^(serves|makes)\b/i.test(line)) || '',
+    notes: valueAfterHeading(notesAt),
+    sourceName: findValue(/^source\s*:\s*/i) || valueAfterHeading(sourceAt),
+    categories: lines(findValue(/^categories?\s*:\s*/i) || valueAfterHeading(categoriesAt)).flatMap((value) => value.split(',').map((item) => item.trim()).filter(Boolean)),
+  };
+}
+
 function storage(mode: AppMode): Storage {
   return mode === 'demo' ? sessionStorage : localStorage;
 }
