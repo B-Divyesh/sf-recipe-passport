@@ -1,8 +1,9 @@
-const CACHE = 'recipe-passport-shell-v1';
+const CACHE = 'recipe-passport-shell-__BUILD_SHA__';
 const SHELL = [
   '/',
   '/index.html',
   '/demo',
+  '/build-info.json',
   '/manifest.webmanifest',
   '/favicon.svg',
   '/apple-touch-icon.png',

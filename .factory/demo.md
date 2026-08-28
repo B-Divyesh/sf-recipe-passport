@@ -27,4 +27,4 @@ Each recipe has a yield, ingredients, method, notes, categories, and source prov
 - **Start for real** deletes the demo key and opens the real add-recipe screen.
 - Navigating from demo mode to a non-demo route also deletes the demo key.
 
-The sample data and app shell are available to the service worker, so the offline claim can be checked entirely inside this sandbox.
+The sample data and app shell are available to the service worker, so the offline claim can be checked entirely inside this sandbox. Every build gives that cache a commit-specific version, so an update fetches a new shell rather than reusing a prior release.

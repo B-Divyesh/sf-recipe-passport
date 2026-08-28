@@ -4,6 +4,14 @@ import type { AppMode, CookbookExport, Recipe } from './types';
 const REAL_KEY = 'recipe-passport:v1:recipes';
 const DEMO_KEY = 'demo:recipe-passport:v1:recipes';
 
+/** Raised when the browser cannot durably store a cookbook change. */
+export class RecipeStorageError extends Error {
+  constructor() {
+    super('This recipe could not be saved because browser storage is full. Export or remove recipes, then try again.');
+    this.name = 'RecipeStorageError';
+  }
+}
+
 const lines = (value: unknown): string[] => {
   if (Array.isArray(value)) {
     return value.map(String).map((line) => line.trim()).filter(Boolean);
@@ -95,7 +103,20 @@ export function loadRecipes(mode: AppMode): Recipe[] {
 }
 
 export function saveRecipes(mode: AppMode, recipes: Recipe[]): void {
-  storage(mode).setItem(key(mode), JSON.stringify(recipes));
+  try {
+    // Web Storage writes are atomic. Do not continue to a success state if the
+    // browser rejects this replacement because of its per-origin quota.
+    storage(mode).setItem(key(mode), JSON.stringify(recipes));
+  } catch (error) {
+    if (error instanceof DOMException && (
+      error.name === 'QuotaExceededError'
+      || error.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+      || error.code === DOMException.QUOTA_EXCEEDED_ERR
+    )) {
+      throw new RecipeStorageError();
+    }
+    throw error;
+  }
 }
 
 export function resetDemo(): Recipe[] {

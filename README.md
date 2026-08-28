@@ -61,7 +61,7 @@ The exact production command is:
 npm run build
 ```
 
-It creates `dist/` with `dist/index.html` at the root. Deploy that directory to Azure Static Web Apps. `public/staticwebapp.config.json` supplies SPA routing, security headers, and cache rules. The repository does not manage DNS, billing, or deployment credentials.
+It creates `dist/` with `dist/index.html` at the root. Each build also writes `dist/build-info.json` and shows the exact Git commit in the footer, so a deployed artifact can be identified. Deploy that directory to Azure Static Web Apps. `public/staticwebapp.config.json` supplies SPA routing, security headers, and cache rules. The repository does not manage DNS, billing, or deployment credentials.
 
 ## Design and provenance
 

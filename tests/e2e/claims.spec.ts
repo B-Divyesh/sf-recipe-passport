@@ -21,6 +21,50 @@ test('@claim:paprika-import imports all important Paprika fields', async ({ page
   await expect(page.getByText(/Nadia’s Paprika archive/)).toBeVisible();
 });
 
+test('does not report success or navigate when a valid 5.6 MB import cannot persist', async ({ page }) => {
+  await page.addInitScript(() => {
+    const originalSetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function setItem(key: string, value: string): void {
+      if (this === localStorage && key === 'recipe-passport:v1:recipes') {
+        throw new DOMException('Storage quota exceeded', 'QuotaExceededError');
+      }
+      originalSetItem.call(this, key, value);
+    };
+  });
+  await page.goto('/add');
+  const recipe = JSON.stringify({
+    title: 'Large retained recipe',
+    ingredients: ['1 durable ingredient'],
+    steps: ['Keep this recipe.'],
+    notes: '',
+  });
+  const reportSize = 5_600_116;
+  const payload = `${recipe}${' '.repeat(reportSize - Buffer.byteLength(recipe))}`;
+  expect(Buffer.byteLength(payload)).toBe(reportSize);
+  await page.locator('#json-file').setInputFiles({
+    name: 'valid-5-6mb.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(payload),
+  });
+  await expect(page.getByRole('status')).toContainText('browser storage is full');
+  await expect(page.getByRole('status')).not.toContainText('Imported');
+  await expect(page).toHaveURL(/\/add$/);
+  expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBeNull();
+  await page.reload();
+  await expect(page.getByRole('status')).toHaveText('');
+});
+
+test('rejects a JSON file above the documented 10 MB import limit before reading it', async ({ page }) => {
+  await page.goto('/add');
+  await page.locator('#json-file').setInputFiles({
+    name: 'too-large.json',
+    mimeType: 'application/json',
+    buffer: Buffer.alloc(10 * 1024 * 1024 + 1, 0),
+  });
+  await expect(page.getByRole('status')).toContainText('larger than 10 MB');
+  await expect(page).toHaveURL(/\/add$/);
+});
+
 test('@claim:manual-add saves a pasted structured recipe', async ({ page }) => {
   await page.goto('/add');
   await page.getByLabel(/Recipe title/).fill('Charred corn salad');

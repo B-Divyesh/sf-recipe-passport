@@ -2,6 +2,11 @@ import './styles.css';
 import { clearDemo, downloadCookbook, loadRecipes, normalizeRecipe, parseRecipeJson, removeRecipe, resetDemo, searchRecipes, upsertRecipes } from './recipes';
 import type { AppMode, Recipe } from './types';
 
+declare const __BUILD_SHA__: string;
+
+const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+const BUILD_SHA = __BUILD_SHA__;
+
 const appRoot = document.querySelector<HTMLDivElement>('#app');
 if (!appRoot) throw new Error('Recipe Passport could not start. Reload this page.');
 const app: HTMLDivElement = appRoot;
@@ -83,7 +88,7 @@ function footer(): string {
         <a href="/terms" data-link>Terms</a>
         <a href="https://sociobot.in" rel="noreferrer">Built by Param Factory <span class="sr-only">(external site)</span></a>
       </nav>
-      <p class="build-id">Recipe Passport v1.0.0 · 2026-08-28</p>
+      <p class="build-id">Recipe Passport build <a href="/build-info.json" data-build-info>${BUILD_SHA}</a> · Original generated artwork</p>
     </footer>`;
 }
 
@@ -421,6 +426,9 @@ function bindEvents(): void {
     if (filename) filename.textContent = selected.name;
     status.className = 'form-status loading'; status.textContent = `Reading ${selected.name}…`;
     try {
+      if (selected.size > MAX_IMPORT_BYTES) {
+        throw new Error('This file is larger than 10 MB. Choose a smaller JSON export.');
+      }
       const recipes = parseRecipeJson(await selected.text(), `Imported from ${selected.name}`);
       upsertRecipes(modeFromPath(), recipes);
       status.className = 'form-status success'; status.textContent = `Imported ${recipes.length} ${recipes.length === 1 ? 'recipe' : 'recipes'}.`;

@@ -1,73 +1,55 @@
-# Recipe Passport independent verification handoff — FAIL
+# Recipe Passport repair handoff
 
-Independent verification completed 28 August 2026 for work order `recipe-passport-verify-1`.
+Completed 28 August 2026 for `recipe-passport-repair-1`.
 
-**Verdict: FAIL — do not release candidate `b240f21ceed1e946e754366687c2b9bc66c16c91`.**
+## Release-blocker repairs
 
-The requested commit cannot be fetched from the configured GitHub remote; remote `main` is still `ad5417ffec4b0994c639bbab32f216aebf503950`. The live artifact differs from that checkout and exposes no commit identity, so it cannot be confirmed as the candidate. The live app also falsely reports success for a valid 5.6 MB import that exceeds browser storage quota and disappears on reload. Its export shape and permanent-delete behavior contradict the available claim tests.
+- **Durable imports:** Web Storage quota failures now stop the add/import action and show: “This recipe could not be saved because browser storage is full. Export or remove recipes, then try again.” The app neither reports an import success nor routes to the cookbook unless `localStorage` accepted the complete replacement. The documented 10 MB file cap is now enforced before file contents are read.
+- **Deploy identity:** production builds emit `/build-info.json` with the exact Git SHA, show that SHA in the footer, and stamp the service-worker cache with it. A verifier can now attribute the HTML/app shell to a specific commit and confirm an update has a new cache name.
+- **Claim-contract behavior:** Recipe Passport’s `recipe-passport/v1` export envelope and delete-with-Undo behavior remain covered by their existing public claim tests. The shipped sample no longer exposes a fictitious external source URL, so it cannot create a dead outbound link.
+- **History focus:** Back and Forward both re-render with focus on the destination page’s sole `h1`.
+- **390 px touch targets:** the home wordmark, footer links, ingredient checkbox/label controls, and ingredient rows are at least 44 × 44 CSS pixels.
+- **Caching policy:** `staticwebapp.config.json` explicitly sets `public, max-age=31536000, immutable` for `/assets/*` and `no-cache` for `/sw.js`; a unit regression protects both directives.
 
-Additional findings: browser Back/Forward loses route focus, several mobile targets are below 44 × 44 CSS pixels, hashed assets receive only 30-second caching, and one sample source link is dead. The cold first-read and one-click demo pass. Normal Paprika import retains 100% of required fields. Offline reload, privacy/network checks, axe, reduced motion, console health, production-size budgets, and the available base checkout's 24 tests pass.
+## Regression coverage
 
-Full evidence, severities, fingerprints, commands, and metrics: [`.factory/verification.md`](verification.md). No product code was modified during verification.
+- Browser regression uploads a syntactically valid **5,600,116-byte** JSON recipe while a realistic `QuotaExceededError` is raised. It asserts the precise storage-full recovery message, no false success, no navigation, and no saved recipe.
+- Browser regression rejects a file at 10 MiB + 1 byte before reading it.
+- Browser regressions verify the build manifest/footer/service-worker SHA agree, Back then Forward focus, every repaired mobile target size, and no outbound source link for the family-card sample.
+- All public claims remain tagged once in `.factory/claims.json`; the suite checks 12 listed claims, including schema export and delete Undo.
 
----
-
-# Original builder handoff
-
-Completed 28 August 2026 for work order `recipe-passport-build-1`.
-
-## What was built
-
-- A Vite and TypeScript static web app with no runtime framework or external service.
-- Paprika JSON import for one recipe, arrays, and Recipe Passport exports.
-- Manual add and edit forms for title, yield, categories, ingredients, steps, notes, source name, and source URL.
-- A local searchable cookbook with empty and no-result states.
-- Recipe pages with checkable ingredients, provenance, edit, delete with undo, and a print/PDF stylesheet.
-- Complete `recipe-passport/v1` JSON export.
-- An isolated `/demo` with three complete sample recipes, reset, and an explicit Start for real path.
-- Separate storage: real data in local storage and demo data in session storage under a `demo:` key.
-- Offline app shell through a versioned service worker.
-- Routes for home, demo, cookbook, add, recipe detail, privacy, terms, and a styled 404.
-- Full metadata, social card, favicon, manifest, robots, sitemap, CSP, security headers, and SWA fallback rules.
-- A product-specific surreal editorial design system and generated hero art with prompt provenance.
-
-## Verification
+## Verification evidence
 
 Run from the repository root:
 
 ```sh
 npm ci
 npm test
+npm run typecheck
+npm run lint
 npm run build
 ```
 
-Final production results:
+Completed locally after a clean `npm ci`:
 
-- Unit tests: 4 passed.
-- Playwright browser tests: 20 passed on Chromium 1.58.2.
-- Public claims: 12 listed in `.factory/claims.json`; each has one tagged browser test.
-- Paprika fixture: 100% retention for title, ingredients, steps, yield, and notes.
-- Axe: no serious or critical issues on home, demo, recipe, privacy, terms, or 404 routes.
-- Keyboard/mobile: passed at 390 × 844 CSS pixels, with no horizontal overflow.
-- Route focus, browser back, empty state, error state, edit, delete, and undo passed.
-- Worker `verify-url.sh`: correct title, language, h1, main, alt text, and button labels; no console errors.
-- `npm audit`: 0 known vulnerabilities.
-- Production bundle: 9.50 KB JavaScript gzip and 4.75 KB CSS gzip.
-- Largest hero: 88 KB WebP; mobile hero: 22 KB WebP.
-- Lighthouse mobile: Performance 100, Accessibility 100, Best Practices 100, SEO 100.
-- Lighthouse: LCP 1.7 s, FCP 1.1 s, TBT 0 ms, CLS 0, total transfer 92 KB.
+- `npm ci`: pass; 0 vulnerabilities.
+- `npm run typecheck`: pass.
+- `npm run lint`: pass (the TypeScript static-analysis gate).
+- Unit tests: 5 passed.
+- Playwright 1.58.2 browser tests: 24 passed on Chromium. This includes desktop and 390 × 844 mobile, keyboard, Back/Forward focus, all public claims, offline reload/update cache identity, privacy/no-third-party requests, import boundaries, print, error/empty states, and direct routes.
+- Accessibility: Playwright Axe 4.10.2 reported zero serious or critical violations on `/`, `/demo`, `/demo/recipe/sample-braised-beans`, `/privacy`, `/terms`, and the 404 route. The Playwright Axe integration is the prescribed equivalent to the standalone CLI.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173 /tmp/recipe-passport-verify-url`: pass; HTTP 200, 560 ms load, title/lang/one `h1`/`main`/image alts/button labels correct, no browser errors.
+- `npm run build`: pass; `dist/index.html` exists. Production output was 9.77 KB gzip JavaScript, 4.77 KB gzip CSS, 88.6 KB desktop hero, and 21.8 KB mobile hero. `/build-info.json` and a commit-stamped `sw.js` were emitted.
 
-Lighthouse used the production preview, Lighthouse 13.0.1, and the factory Chromium binary. Evidence was stored outside the repository in `/tmp/recipe-verify` and `/tmp/recipe-lighthouse.json`.
+The local Vite preview does not apply Azure response headers, so immutable-cache behavior is verified as the committed Azure Static Web Apps configuration and by its unit test. Azure must serve that file as the work order’s static deployment configuration specifies.
 
-## Build and deploy
+## Deploy and live verification
 
-The exact build command is `npm run build`. Output lands in `dist/`, with `dist/index.html` at its root. Deploy `dist/` as an Azure Static Web App. The included `staticwebapp.config.json` handles history fallback, cache policy, and security headers.
+Deploy `dist/` to Azure Static Web Apps from `main`; do not change DNS, infrastructure, or billing. The push for this repair is the deployment trigger supplied by the factory. After the deployment finishes, verify the deployed `/build-info.json` commit equals the pushed repair commit and that `/sw.js` contains `recipe-passport-shell-<that-commit>` before releasing.
 
-## Known gaps
+## Remaining product limits
 
-- The importer accepts unencrypted JSON. It does not unpack compressed or encrypted `.paprikarecipes` archives.
-- Browser storage does not sync between devices. Users should export JSON before clearing storage or moving devices.
-- PDF output uses the browser’s Print → Save as PDF flow. The app does not bundle a PDF engine.
+- The importer accepts unencrypted JSON, not compressed or encrypted `.paprikarecipes` archives.
+- Browser storage does not sync across devices. Export JSON before clearing browser data or changing devices.
+- PDF export uses the browser Print → Save as PDF flow.
 - Ingredient checks are temporary cooking state and reset on reload.
-
-These limits match the local, static, no-account scope. A future desktop importer could add archive unpacking if format maintenance justifies it.

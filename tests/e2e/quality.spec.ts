@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 
 for (const route of ['/', '/demo', '/demo/recipe/sample-braised-beans', '/privacy', '/terms', '/missing-page']) {
@@ -16,7 +17,7 @@ for (const route of ['/', '/demo', '/demo/recipe/sample-braised-beans', '/privac
   });
 }
 
-test('works with a keyboard at 390 CSS pixels', async ({ page }) => {
+test('works with a keyboard and keeps every required touch target at 390 CSS pixels', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('body')).toHaveJSProperty('scrollWidth', 390);
@@ -26,14 +27,50 @@ test('works with a keyboard at 390 CSS pixels', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/demo$/);
   await expect(page.getByText('Demo — sample data, nothing is saved to your cookbook.')).toBeVisible();
+
+  for (const target of [
+    page.getByRole('link', { name: 'Recipe Passport home' }),
+    page.getByRole('link', { name: 'Privacy' }).last(),
+    page.getByRole('link', { name: 'Terms' }),
+  ]) {
+    const box = await target.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
+  }
+
+  await page.goto('/demo/recipe/sample-braised-beans');
+  const ingredient = await page.getByLabel('2 tablespoons olive oil').boundingBox();
+  expect(ingredient?.width).toBeGreaterThanOrEqual(44);
+  expect(ingredient?.height).toBeGreaterThanOrEqual(44);
+  const ingredientRow = await page.locator('.ingredient-list li').first().boundingBox();
+  expect(ingredientRow?.height).toBeGreaterThanOrEqual(44);
 });
 
-test('back navigation restores the previous route and moves focus', async ({ page }) => {
+test('back and forward navigation restore the route and move focus', async ({ page }) => {
   await page.goto('/demo');
   await page.getByRole('link', { name: 'Open Tomato-braised butter beans' }).click();
   await page.goBack();
   await expect(page).toHaveURL(/\/demo$/);
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/demo\/recipe\/sample-braised-beans$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
+});
+
+test('build identity is visible and matches the generated service worker cache', async ({ page }) => {
+  const commit = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: commit })).toHaveAttribute('href', '/build-info.json');
+  const identity = await (await page.request.get('/build-info.json')).json();
+  expect(identity).toEqual({ product: 'recipe-passport', commit });
+  const serviceWorker = await (await page.request.get('/sw.js')).text();
+  expect(serviceWorker).toContain(`recipe-passport-shell-${commit}`);
+});
+
+test('sample provenance does not expose a dead external link', async ({ page }) => {
+  await page.goto('/demo/recipe/sample-lemon-cake');
+  await expect(page.getByText('Family recipe card')).toBeVisible();
+  await expect(page.getByRole('link', { name: /Open source/i })).toHaveCount(0);
 });
 
 test('shows useful empty and import error states', async ({ page }) => {
