@@ -81,4 +81,4 @@ Final production prompt:
 
 - Hero WebP is capped below 300 KB at its largest served size and has fixed dimensions.
 - The 640px hero is the mobile source. The social image is never loaded by the page.
-- Below-fold content uses `content-visibility: auto`; animation is CSS-only.
+- The page uses no runtime image library; animation is CSS-only.

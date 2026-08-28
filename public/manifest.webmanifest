@@ -1,0 +1,12 @@
+{
+  "name": "Recipe Passport",
+  "short_name": "Recipes",
+  "description": "A private offline cookbook for recipes you already own.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4eedf",
+  "theme_color": "#f4eedf",
+  "icons": [
+    { "src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
