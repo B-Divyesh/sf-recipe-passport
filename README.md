@@ -2,15 +2,15 @@
 
 Move your recipes into a private offline cookbook.
 
-Recipe Passport is for people leaving a recipe app or tired of ad-heavy recipe pages. It imports user-provided Paprika JSON and pasted recipes into a searchable cookbook stored in the browser. Every recipe keeps its source. A cook can print one clean recipe or export the whole cookbook as JSON.
+Recipe Passport is for people leaving a recipe app or tired of cluttered recipe pages. It imports user-provided Paprika JSON and pasted recipes into a searchable cookbook stored in the browser. Paprika imports and manual recipes retain supplied source details. A cook can print one clean recipe or export the whole cookbook as JSON.
 
 Live site: <https://recipe-passport.sociobot.in>
 
-Try the isolated sample: <https://recipe-passport.sociobot.in/demo>
+Try the isolated sample in one click: <https://recipe-passport.sociobot.in/?demo=1>
 
 ## What it does
 
-- Imports Paprika JSON, JSON arrays, and Recipe Passport JSON exports.
+- Imports Paprika JSON, JSON arrays, and Recipe Passport JSON exports without losing saved fields.
 - Adds or edits a recipe with ingredients, steps, yield, notes, categories, and source.
 - Searches recipes by title, ingredient, category, note, or source.
 - Opens a clean recipe view with checkable ingredients.

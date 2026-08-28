@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
 
-for (const route of ['/', '/demo', '/demo/recipe/sample-braised-beans', '/privacy', '/terms', '/missing-page']) {
+for (const route of ['/', '/demo', '/demo/recipe/sample-braised-beans', '/privacy', '/terms']) {
   test(`has a sound document and no serious accessibility issues on ${route}`, async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
@@ -16,6 +16,59 @@ for (const route of ['/', '/demo', '/demo/recipe/sample-braised-beans', '/privac
     expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
   });
 }
+
+test('serves a real styled HTTP 404 with a working return path', async ({ page }) => {
+  const response = await page.goto('/missing-page');
+  expect(response?.status()).toBe(404);
+  await expect(page).toHaveTitle('Not found — Recipe Passport');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('This recipe card slipped away.');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('main')).toHaveCount(1);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
+  await page.getByRole('link', { name: 'Return home' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Move your recipes into a private cookbook.');
+});
+
+test('serves and maintains route-accurate share metadata', async ({ page }) => {
+  const routes = [
+    ['/demo', 'Demo — Recipe Passport'],
+    ['/privacy', 'Privacy — Recipe Passport'],
+    ['/terms', 'Terms — Recipe Passport'],
+    ['/demo/recipe/sample-braised-beans', 'Tomato-braised butter beans — Recipe Passport'],
+  ] as const;
+  for (const [route, title] of routes) {
+    const response = await page.goto(route);
+    expect(response?.status()).toBe(200);
+    await expect(page).toHaveTitle(title);
+    const canonical = `https://recipe-passport.sociobot.in${route}`;
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', canonical);
+    await expect(page.locator('meta[property="og:title"]')).toHaveAttribute('content', title);
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', canonical);
+    await expect(page.locator('meta[name="twitter:title"]')).toHaveAttribute('content', title);
+    await expect(page.locator('meta[property="og:description"]')).toHaveAttribute('content', await page.locator('meta[name="description"]').getAttribute('content') ?? '');
+    await expect(page.locator('meta[name="twitter:description"]')).toHaveAttribute('content', await page.locator('meta[name="description"]').getAttribute('content') ?? '');
+    const raw = await (await page.request.get(route)).text();
+    expect(raw).toContain(`<title>${title}</title>`);
+    expect(raw).toContain(`property="og:url" content="${canonical}"`);
+  }
+});
+
+test('opens the isolated query demo in one click and can reset it', async ({ page }) => {
+  await page.goto('/');
+  const action = page.getByRole('link', { name: 'Try it with sample data' });
+  await expect(action).toHaveAttribute('href', '/?demo=1');
+  await action.click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await expect(page.getByText('Demo — sample data, nothing is saved to your cookbook.')).toBeVisible();
+  await page.getByLabel('Search your cookbook').fill('tahini');
+  await expect(page.getByText('1 recipe')).toBeVisible();
+  await page.getByRole('button', { name: 'Reset demo' }).click();
+  await expect(page.getByText('3 recipes')).toBeVisible();
+  await expect(page.getByLabel('Search your cookbook')).toHaveValue('');
+  expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBeNull();
+});
 
 test('works with a keyboard and keeps every required touch target at 390 CSS pixels', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

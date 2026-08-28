@@ -82,5 +82,26 @@
     "where": "landing page, README",
     "test": "npm test -- --grep @claim:no-account",
     "sandbox": "fresh browser context; enter demo and real add flow without encountering sign-in or account controls"
+  },
+  {
+    "id": "export-import-roundtrip",
+    "claim": "Imports Recipe Passport JSON exports without losing recipes or saved fields.",
+    "where": "import page, README",
+    "test": "npm test -- --grep @claim:export-import-roundtrip",
+    "sandbox": "fresh browser context; export the isolated demo; leave demo mode; import into an empty real cookbook; compare every recipe and field"
+  },
+  {
+    "id": "source-retention",
+    "claim": "Paprika imports and manually entered recipes retain their supplied source name and safe URL.",
+    "where": "recipe view, README",
+    "test": "npm test -- --grep @claim:source-retention",
+    "sandbox": "fresh browser context; save a manual recipe with source details and import the Paprika fixture; assert both provenance displays and stored values"
+  },
+  {
+    "id": "recipe-fields",
+    "claim": "Adds and edits ingredients, steps, yield, notes, categories, and source.",
+    "where": "add page, edit page, README",
+    "test": "npm test -- --grep @claim:recipe-fields",
+    "sandbox": "fresh browser context; add all named fields; edit every field; reload the recipe; assert every edited value"
   }
 ]

@@ -30,7 +30,7 @@ describe('recipe normalization', () => {
   it('accepts Recipe Passport exports', () => {
     const recipe = normalizeRecipe(paprika);
     const output = cookbookExport([recipe]);
-    expect(parseRecipeJson(JSON.stringify(output))).toHaveLength(1);
+    expect(parseRecipeJson(JSON.stringify(output))).toEqual([recipe]);
   });
 
   it('finds recipes by ingredient without changing the source list', () => {

@@ -171,3 +171,72 @@ test('@claim:ingredient-check keeps cooking checks temporary', async ({ page }) 
   const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('demo:recipe-passport:v1:recipes') ?? '[]'));
   expect(saved.find((recipe: { id: string }) => recipe.id === 'sample-braised-beans').ingredients[0]).toBe('2 tablespoons olive oil');
 });
+
+test('@claim:export-import-roundtrip preserves every recipe and saved field', async ({ page }) => {
+  await page.goto('/demo');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export cookbook' }).click();
+  const download = await downloadPromise;
+  const file = await download.path();
+  expect(file).toBeTruthy();
+  const exported = JSON.parse(await readFile(file!, 'utf8'));
+
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await expect(page).toHaveURL(/\/add$/);
+  await page.locator('#json-file').setInputFiles(file!);
+  await expect(page).toHaveURL(/\/cookbook$/);
+  const imported = await page.evaluate(() => JSON.parse(localStorage.getItem('recipe-passport:v1:recipes') ?? '[]'));
+  expect(imported).toEqual(exported.recipes);
+  await expect(page.getByText('3 recipes')).toBeVisible();
+});
+
+test('@claim:source-retention keeps supplied manual and Paprika provenance', async ({ page }) => {
+  await page.goto('/add');
+  await page.getByLabel(/Recipe title/).fill('Source test soup');
+  await page.getByLabel(/Ingredients/).fill('1 leek');
+  await page.getByLabel(/Steps/).fill('Simmer the leek.');
+  await page.getByLabel('Source name').fill('Ari’s kitchen card');
+  await page.getByLabel('Source URL').fill('https://example.com/ari-soup');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page.getByText(/Ari’s kitchen card/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /Open source/ })).toHaveAttribute('href', 'https://example.com/ari-soup');
+
+  await page.evaluate(() => localStorage.clear());
+  await page.goto('/add');
+  await page.locator('#json-file').setInputFiles(path.join(process.cwd(), 'tests/fixtures/paprika-recipes.json'));
+  await expect(page).toHaveURL(/\/cookbook$/);
+  await page.getByRole('link', { name: 'Open Olive and lemon pasta' }).click();
+  await expect(page.getByText(/Nadia’s Paprika archive/)).toBeVisible();
+  await expect(page.getByRole('link', { name: /Open source/ })).toHaveAttribute('href', 'https://example.com/olive-pasta');
+});
+
+test('@claim:recipe-fields adds and edits every documented recipe field', async ({ page }) => {
+  await page.goto('/add');
+  await page.getByLabel(/Recipe title/).fill('First lentil bowl');
+  await page.getByLabel('Yield').fill('Serves 2');
+  await page.getByLabel('Categories').fill('Lunch, Lentils');
+  await page.getByLabel(/Ingredients/).fill('100 g lentils\n1 carrot');
+  await page.getByLabel(/Steps/).fill('Cook the lentils.\nFold in the carrot.');
+  await page.getByLabel('Notes').fill('Pack while cool.');
+  await page.getByLabel('Source name').fill('Blue kitchen notebook');
+  await page.getByLabel('Source URL').fill('https://example.com/first-lentils');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await page.getByRole('link', { name: 'Edit recipe' }).click();
+
+  await page.getByLabel(/Recipe title/).fill('Warm lentil bowl');
+  await page.getByLabel('Yield').fill('Serves 3');
+  await page.getByLabel('Categories').fill('Dinner, Pulses');
+  await page.getByLabel(/Ingredients/).fill('150 g green lentils\n2 carrots');
+  await page.getByLabel(/Steps/).fill('Simmer the green lentils.\nRoast and fold in the carrots.');
+  await page.getByLabel('Notes').fill('Finish with lemon.');
+  await page.getByLabel('Source name').fill('Green kitchen notebook');
+  await page.getByLabel('Source URL').fill('https://example.com/warm-lentils');
+  await page.getByRole('button', { name: 'Save recipe' }).click();
+  await page.reload();
+
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Warm lentil bowl');
+  for (const text of ['Serves 3', 'Dinner · Pulses', '150 g green lentils', '2 carrots', 'Simmer the green lentils.', 'Roast and fold in the carrots.', 'Finish with lemon.', 'Green kitchen notebook']) {
+    await expect(page.getByText(text, { exact: false })).toBeVisible();
+  }
+  await expect(page.getByRole('link', { name: /Open source/ })).toHaveAttribute('href', 'https://example.com/warm-lentils');
+});

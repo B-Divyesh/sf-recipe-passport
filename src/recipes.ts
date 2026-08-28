@@ -59,7 +59,7 @@ export function normalizeRecipe(value: unknown, importedFrom = 'JSON import'): R
     sourceUrl,
     categories,
     createdAt: text(item.createdAt) || now,
-    updatedAt: now,
+    updatedAt: text(item.updatedAt) || now,
   };
 }
 

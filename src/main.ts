@@ -1,4 +1,5 @@
 import './styles.css';
+import { metadataForPath } from './metadata';
 import { clearDemo, downloadCookbook, loadRecipes, normalizeRecipe, parseRecipeJson, removeRecipe, resetDemo, searchRecipes, upsertRecipes } from './recipes';
 import type { AppMode, Recipe } from './types';
 
@@ -97,9 +98,21 @@ function shell(content: string, mode: AppMode): string {
 }
 
 function setMetadata(title: string, description: string, path: string): void {
+  const canonical = `https://recipe-passport.sociobot.in${path === '/' ? '/' : path}`;
+  const image = 'https://recipe-passport.sociobot.in/assets/social-card.webp';
+  const values: Array<[string, string, string]> = [
+    ['meta[name="description"]', 'content', description],
+    ['meta[property="og:title"]', 'content', title],
+    ['meta[property="og:description"]', 'content', description],
+    ['meta[property="og:url"]', 'content', canonical],
+    ['meta[property="og:image"]', 'content', image],
+    ['meta[name="twitter:title"]', 'content', title],
+    ['meta[name="twitter:description"]', 'content', description],
+    ['meta[name="twitter:image"]', 'content', image],
+    ['link[rel="canonical"]', 'href', canonical],
+  ];
   document.title = title;
-  document.querySelector<HTMLMetaElement>('meta[name="description"]')?.setAttribute('content', description);
-  document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', `https://recipe-passport.sociobot.in${path}`);
+  values.forEach(([selector, attribute, value]) => document.querySelector<HTMLElement>(selector)?.setAttribute(attribute, value));
 }
 
 function landing(): string {
@@ -107,10 +120,10 @@ function landing(): string {
     <section class="hero" aria-labelledby="landing-title">
       <div class="hero-copy">
         <p class="eyebrow">A local recipe archive</p>
-        <h1 id="landing-title">Move your recipes into a quiet cookbook.</h1>
-        <p class="lede">For cooks leaving an app or ad-heavy pages, Recipe Passport keeps a searchable copy on this device.</p>
+        <h1 id="landing-title">Move your recipes into a private cookbook.</h1>
+        <p class="lede">For cooks leaving an app or cluttered recipe page, it keeps a searchable copy on this device.</p>
         <div class="hero-actions">
-          <a class="button primary" href="/demo" data-link>Try it with sample data</a>
+          <a class="button primary" href="/?demo=1" data-link>Try it with sample data</a>
           <a class="button secondary" href="/add" data-link>Import your recipes</a>
         </div>
         <p class="action-note">The sample opens a ready-made cookbook. Import accepts Paprika JSON or a pasted recipe.</p>
@@ -317,37 +330,36 @@ function render(shouldFocus = false): void {
   const path = location.pathname.replace(/\/$/, '') || '/';
   const mode = modeFromPath();
   let content: string;
-  let title: string;
-  let description: string;
-  let known = true;
+  let recipeTitle: string | undefined;
 
   if (path === '/') {
-    content = landing(); title = 'Recipe Passport — Keep recipes offline'; description = 'Import Paprika JSON or paste recipes into a private, searchable cookbook you can print and export.';
+    content = landing();
   } else if (path === '/cookbook' || path === '/demo') {
-    content = cookbook(mode); title = `${mode === 'demo' ? 'Demo' : 'Cookbook'} — Recipe Passport`; description = 'Search and open recipes stored in this browser.';
+    content = cookbook(mode);
   } else if (path === '/add' || path === '/demo/add') {
-    content = recipeForm(mode); title = 'Add recipes — Recipe Passport'; description = 'Import Paprika JSON or paste a structured recipe.';
+    content = recipeForm(mode);
   } else if (path === '/privacy') {
-    content = policyPage('privacy'); title = 'Privacy — Recipe Passport'; description = 'How Recipe Passport stores recipe data in your browser.';
+    content = policyPage('privacy');
   } else if (path === '/terms') {
-    content = policyPage('terms'); title = 'Terms — Recipe Passport'; description = 'Terms for using Recipe Passport.';
+    content = policyPage('terms');
   } else {
     const match = path.match(/^\/(demo\/)?recipe\/([^/]+)$/);
     if (match) {
       const recipeMode: AppMode = match[1] ? 'demo' : 'real';
       const recipe = loadRecipes(recipeMode).find((item) => item.id === decodeURIComponent(match[2]));
       if (recipe) {
-        content = recipePage(recipe, recipeMode); title = `${recipe.title} — Recipe Passport`; description = `Ingredients and method for ${recipe.title}.`;
+        content = recipePage(recipe, recipeMode); recipeTitle = recipe.title;
       } else {
-        content = notFound(); title = 'Not found — Recipe Passport'; description = 'This Recipe Passport page was not found.'; known = false;
+        content = notFound();
       }
     } else {
-      content = notFound(); title = 'Not found — Recipe Passport'; description = 'This Recipe Passport page was not found.'; known = false;
+      content = notFound();
     }
   }
 
   app.innerHTML = shell(content, mode);
-  setMetadata(title, description, known ? path : '/404');
+  const metadata = metadataForPath(path, recipeTitle);
+  setMetadata(metadata.title, metadata.description, metadata.canonicalPath);
   bindEvents();
   if (shouldFocus) {
     requestAnimationFrame(() => {
@@ -460,6 +472,7 @@ function bindEvents(): void {
         sourceName: raw.sourceName,
         sourceUrl: raw.sourceUrl,
         createdAt: existing?.createdAt,
+        updatedAt: new Date().toISOString(),
       }, 'Manual entry');
       upsertRecipes(modeFromPath(), [recipe]);
       navigate(routePath(`/recipe/${encodeURIComponent(recipe.id)}`));
