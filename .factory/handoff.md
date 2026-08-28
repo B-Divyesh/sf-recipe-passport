@@ -1,54 +1,57 @@
-# Recipe Passport polish 3 handoff
+# Recipe Passport review 4 handoff
 
-Completed 28 August 2026 for `recipe-passport-polish-3`.
+Completed 28 August 2026 for `recipe-passport-review-4`.
 
 ## Result
 
-All cumulative review findings are closed. The repair adds three executable
-public privacy claims: no scraping, no recipe hosting/uploads, and no tracking,
-ads, or telemetry. It also adds a sitemap regression test covering every
-crawlable static route.
+Adversarial first-read review 4 is a **PASS with zero findings**. No product
+code was modified. The review is recorded in `.factory/review-4.md` and covers
+the cold mobile/desktop read, complete copy inventory, one-click demo and real-
+data isolation, all registered claims, prior finding history, routing and
+metadata, accessibility, visual identity, and missed leverage.
 
-The final deployed artifact is commit
-`d25f32370e79ef009745390222cef1d5d6c162df`, confirmed at
-<https://recipe-passport.sociobot.in/build-info.json>. It was deployed through
-Azure Static Web Apps deployment `2943b8d0-e368-446b-81f9-129141aef496`.
+The live deployment and reviewed checkout both identify commit
+`cca03e91608ece178b5befc6c2bd3c21d5470426`.
 
-## Verify
+## Verification performed
+
+- Fresh GitHub clone at `/tmp/tmp.IedxnRIEHQ/repo`; `npm ci` reported zero
+  vulnerabilities.
+- Every one of the 19 literal test commands in `.factory/claims.json` passed
+  independently.
+- `npm test`: 9 Vitest tests and 36 Chromium tests passed.
+- `npm run lint`: passed.
+- `npm run build`: passed and produced `dist/index.html`; entry sizes are
+  10.99 KB gzip JavaScript and 4.91 KB gzip CSS.
+- `npm run verify:live`: passed first-screen, demo/reset/isolation, offline,
+  privacy network, metadata, Axe, mobile, legal-route, and HTTP 404 checks.
+- `/opt/fleet/lib/verify-url.sh https://recipe-passport.sociobot.in
+  /tmp/recipe-passport-review4-live-check`: passed with no console errors and
+  correct title, language, main, h1, alt, and button checks.
+- A manual fresh live demo retained a non-empty real-storage sentinel through
+  entry and Reset, then cleared only demo session storage on Start for real.
+  All observed requests were same-origin GETs.
+- All discovered live links returned 200, except deliberately unknown paths,
+  which returned the designed HTTP 404.
+
+## Reproduce
 
 ```sh
 npm ci
 npm test
 npm run lint
 npm run build
-```
-
-Run every public claim separately with the literal command recorded in
-`.factory/claims.json`. For a cold production verification, run:
-
-```sh
 npm run verify:live
-/opt/fleet/lib/verify-url.sh https://recipe-passport.sociobot.in /tmp/recipe-passport-live
+
+mkdir -p /tmp/recipe-passport-review4-live-check
+/opt/fleet/lib/verify-url.sh https://recipe-passport.sociobot.in \
+  /tmp/recipe-passport-review4-live-check
 ```
 
-## Exact evidence
-
-- Final remote clean clone: `/tmp/recipe-passport-polish3-final.dXaPnu/repo`.
-  `npm ci` reported zero vulnerabilities; all 19 claim commands passed
-  independently.
-- Final complete suite: 9 Vitest unit tests and 36 Chromium tests passed;
-  lint and build passed. The production bundle is 10.99 KB gzip JS and 4.91 KB
-  gzip CSS, with `dist/index.html` at the root.
-- Cold live verification passed at <https://recipe-passport.sociobot.in>: 865
-  ms load, no console errors, correct title/lang/main/h1/alt/button checks,
-  demo isolation/reset, offline reload, route metadata, legal routes, and true
-  404s. The live verifier additionally proved no recipe-source fetch, no
-  upload, and no analytics/ads/telemetry request.
-- Mobile Lighthouse: Performance 100, Accessibility 100, Best Practices 100,
-  SEO 100; LCP 1.1 s, CLS 0, TBT 10 ms.
-- Screenshots and raw reports: `.factory/polish-artifacts/polish-3-*`.
-  The full finding-by-finding mapping is in `.factory/polish-3.md`.
+Run each `test` command in `.factory/claims.json` separately to reproduce the
+claims gate exactly.
 
 ## Remaining work
 
-None known.
+None found. Future changes should retain the registered claim tests and reopen
+the matching historical finding if any reviewed behavior regresses.
