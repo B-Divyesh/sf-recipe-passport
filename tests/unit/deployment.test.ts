@@ -27,6 +27,18 @@ describe('static deployment policy', () => {
     expect(readFileSync(resolve(process.cwd(), 'public/404.html'), 'utf8')).toContain('Return home');
   });
 
+  it('lists every crawlable static route in the sitemap', () => {
+    const sitemap = readFileSync(resolve(process.cwd(), 'public/sitemap.xml'), 'utf8');
+    for (const route of [
+      '/', '/cookbook', '/add', '/demo', '/demo/add', '/privacy', '/terms',
+      '/demo/recipe/sample-braised-beans', '/demo/recipe/sample-lemon-cake',
+      '/demo/recipe/sample-noodle-salad',
+    ]) {
+      const url = `https://recipe-passport.sociobot.in${route === '/' ? '/' : route}`;
+      expect(sitemap).toContain(`<loc>${url}</loc>`);
+    }
+  });
+
   it('registers exactly one browser test tag for every public claim', () => {
     const claims = JSON.parse(readFileSync(resolve(process.cwd(), '.factory/claims.json'), 'utf8')) as Array<{ id: string }>;
     const sources = [
