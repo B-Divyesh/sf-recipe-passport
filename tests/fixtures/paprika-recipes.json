@@ -1,0 +1,23 @@
+[
+  {
+    "uid": "paprika-olive-pasta",
+    "name": "Olive and lemon pasta",
+    "ingredients": "250 g spaghetti\n3 tablespoons olive oil\n1 lemon, zest and juice\n80 g green olives\nBlack pepper",
+    "directions": "Cook the spaghetti until al dente.\nWarm the oil with the lemon zest.\nToss the pasta with the oil, olives, and lemon juice.",
+    "servings": "Serves 2",
+    "notes": "Save a cup of pasta water before draining.",
+    "source": "Nadia’s Paprika archive",
+    "source_url": "https://example.com/olive-pasta",
+    "categories": ["Pasta", "Weeknight"]
+  },
+  {
+    "uid": "paprika-pear-oats",
+    "name": "Pear breakfast oats",
+    "ingredients": "80 g rolled oats\n300 ml milk\n1 ripe pear\nPinch of cinnamon",
+    "directions": "Simmer the oats and milk for 6 minutes.\nGrate in half the pear.\nServe with the remaining pear and cinnamon.",
+    "servings": "Serves 2",
+    "notes": "Use oat milk for a dairy-free bowl.",
+    "source": "Breakfast notebook",
+    "categories": ["Breakfast"]
+  }
+]

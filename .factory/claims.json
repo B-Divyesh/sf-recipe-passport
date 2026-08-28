@@ -1,0 +1,65 @@
+[
+  {
+    "id": "paprika-import",
+    "claim": "Imports Paprika JSON and keeps title, ingredients, steps, yield, notes, and source.",
+    "where": "landing page, import page, README",
+    "test": "npm test -- --grep @claim:paprika-import",
+    "sandbox": "fresh browser context; import the shipped Paprika fixture; assert all retained fields in the recipe view"
+  },
+  {
+    "id": "manual-add",
+    "claim": "Adds a pasted structured recipe.",
+    "where": "landing page, add page, README",
+    "test": "npm test -- --grep @claim:manual-add",
+    "sandbox": "fresh browser context; complete the manual form and assert the saved recipe"
+  },
+  {
+    "id": "search-cookbook",
+    "claim": "Searches saved recipes by title or ingredient.",
+    "where": "landing page, cookbook page, README",
+    "test": "npm test -- --grep @claim:search-cookbook",
+    "sandbox": "demo entry point; search an ingredient and assert the matching sample recipe"
+  },
+  {
+    "id": "json-export",
+    "claim": "Exports the complete cookbook as JSON.",
+    "where": "landing page, cookbook toolbar, privacy page, README",
+    "test": "npm test -- --grep @claim:json-export",
+    "sandbox": "demo entry point; download JSON; assert schema and every sample recipe"
+  },
+  {
+    "id": "print-recipe",
+    "claim": "Opens a clean print view for a recipe.",
+    "where": "landing page, recipe toolbar, README",
+    "test": "npm test -- --grep @claim:print-recipe",
+    "sandbox": "demo entry point; open a recipe; intercept and assert the print action"
+  },
+  {
+    "id": "offline-reload",
+    "claim": "Works offline after the first visit.",
+    "where": "landing hero, README",
+    "test": "npm test -- --grep @claim:offline-reload",
+    "sandbox": "fresh browser context; open demo; wait for its service worker; go offline; reload and assert sample content"
+  },
+  {
+    "id": "local-only",
+    "claim": "Recipe content stays in browser storage and no third-party runtime request is made.",
+    "where": "landing hero, privacy page, README",
+    "test": "npm test -- --grep @claim:local-only",
+    "sandbox": "fresh browser context; monitor the full demo flow; assert every request is same-origin and real storage stays empty"
+  },
+  {
+    "id": "demo-isolation",
+    "claim": "Demo changes use separate session storage and are discarded when demo mode ends.",
+    "where": "demo banner, privacy page, README",
+    "test": "npm test -- --grep @claim:demo-isolation",
+    "sandbox": "demo entry point; change demo storage; choose Start for real; assert demo and real storage are empty"
+  },
+  {
+    "id": "free-use",
+    "claim": "Recipe Passport is free to use.",
+    "where": "landing hero, terms page, README",
+    "test": "npm test -- --grep @claim:free-use",
+    "sandbox": "fresh browser context; assert the free price fact and absence of purchase or license controls"
+  }
+]
