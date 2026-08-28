@@ -1,6 +1,34 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type BrowserContext } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+
+interface ObservedRequest {
+  url: string;
+  method: string;
+  postData: string | null;
+}
+
+function observeRequests(context: BrowserContext): ObservedRequest[] {
+  const requests: ObservedRequest[] = [];
+  context.on('request', (request) => {
+    requests.push({ url: request.url(), method: request.method(), postData: request.postData() });
+  });
+  return requests;
+}
+
+function expectNoRecipeSiteRequests(requests: ObservedRequest[], sourceUrls: string[]): void {
+  const sourceOrigins = new Set(sourceUrls.map((url) => new URL(url).origin));
+  expect(requests.filter((request) => sourceUrls.includes(request.url) || sourceOrigins.has(new URL(request.url).origin))).toEqual([]);
+}
+
+function isStaticAppRequest(request: ObservedRequest, origin: string): boolean {
+  const url = new URL(request.url);
+  if (url.origin !== origin || request.method !== 'GET' || request.postData) return false;
+  return [
+    '/', '/index.html', '/demo', '/add', '/cookbook', '/recipe', '/demo/recipe/sample-braised-beans', '/build-info.json',
+    '/404.css', '/favicon.svg', '/apple-touch-icon.png', '/manifest.webmanifest', '/robots.txt', '/sw.js',
+  ].includes(url.pathname) || url.pathname.startsWith('/assets/');
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -203,6 +231,80 @@ test('@claim:free-use @claim:no-account presents no price or account gate', asyn
   await page.getByRole('link', { name: 'Import your recipes' }).click();
   await expect(page).toHaveURL(/\/add$/);
   await expect(page.getByText(/sign in|create account/i)).toHaveCount(0);
+});
+
+test('@claim:no-scraping never requests recipes from source sites', async ({ page, context }) => {
+  const requests = observeRequests(context);
+  const demoSource = 'https://recipes.example.test/demo-soup';
+  const realSource = 'https://recipes.example.test/real-soup';
+  const blockedSourceRequests: string[] = [];
+  await page.route('https://recipes.example.test/**', async (route) => {
+    blockedSourceRequests.push(route.request().url());
+    await route.abort();
+  });
+
+  await page.goto('/demo/add');
+  await page.getByLabel(/Recipe title/).fill('Demo source soup');
+  await page.getByLabel(/Ingredients/).fill('1 tomato');
+  await page.getByLabel(/Steps/).fill('Simmer the tomato.');
+  await page.getByLabel('Source URL').fill(demoSource);
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page.getByRole('heading', { name: 'Demo source soup' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await page.getByLabel(/Recipe title/).fill('Real source soup');
+  await page.getByLabel(/Ingredients/).fill('1 carrot');
+  await page.getByLabel(/Steps/).fill('Simmer the carrot.');
+  await page.getByLabel('Source URL').fill(realSource);
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page.getByRole('heading', { name: 'Real source soup' })).toBeVisible();
+
+  expect(blockedSourceRequests).toEqual([]);
+  expectNoRecipeSiteRequests(requests, [demoSource, realSource]);
+});
+
+test('@claim:no-hosting never uploads or hosts recipe data', async ({ page, context }) => {
+  const requests = observeRequests(context);
+  const demoSource = 'https://recipes.example.test/demo-upload-proof';
+  const realSource = 'https://recipes.example.test/real-upload-proof';
+  const marker = 'recipe-hosting-proof-7f3e';
+
+  await page.goto('/demo/add');
+  await page.getByLabel(/Recipe title/).fill(`Demo ${marker}`);
+  await page.getByLabel(/Ingredients/).fill('1 pepper');
+  await page.getByLabel(/Steps/).fill('Roast the pepper.');
+  await page.getByLabel('Source URL').fill(demoSource);
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page.getByRole('heading', { name: `Demo ${marker}` })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await page.getByLabel(/Recipe title/).fill(`Real ${marker}`);
+  await page.getByLabel(/Ingredients/).fill('1 aubergine');
+  await page.getByLabel(/Steps/).fill('Roast the aubergine.');
+  await page.getByLabel('Source URL').fill(realSource);
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page.getByRole('heading', { name: `Real ${marker}` })).toBeVisible();
+
+  expectNoRecipeSiteRequests(requests, [demoSource, realSource]);
+  expect(requests.filter((request) => request.method !== 'GET' || request.postData?.includes(marker))).toEqual([]);
+});
+
+test('@claim:no-tracking makes only static app requests during demo and real flows', async ({ page, context }) => {
+  const requests = observeRequests(context);
+  await page.goto('/');
+  const origin = new URL(page.url()).origin;
+  await page.getByRole('link', { name: 'Try it with sample data' }).click();
+  await expect(page).toHaveURL(/\/demo$/);
+  await page.getByRole('link', { name: 'Open Lemon olive oil cake' }).click();
+  await expect(page.getByRole('heading', { name: 'Lemon olive oil cake' })).toBeVisible();
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await page.locator('#json-file').setInputFiles(path.join(process.cwd(), 'tests/fixtures/paprika-recipes.json'));
+  await expect(page).toHaveURL(/\/cookbook$/);
+  await page.getByRole('link', { name: 'Open Olive and lemon pasta' }).click();
+  await expect(page.getByRole('heading', { name: 'Olive and lemon pasta' })).toBeVisible();
+
+  expect(requests).not.toEqual([]);
+  expect(requests.filter((request) => !isStaticAppRequest(request, origin))).toEqual([]);
 });
 
 test('@claim:ingredient-check keeps cooking checks temporary', async ({ page }) => {

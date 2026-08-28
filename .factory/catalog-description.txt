@@ -1,1 +1,1 @@
-Move recipes into a private cookbook you can search, print, and keep on this device.
+Move recipes into a private cookbook you can search, print, and export.

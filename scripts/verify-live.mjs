@@ -4,15 +4,31 @@ import path from 'node:path';
 
 const base = process.env.VERIFY_URL || 'https://recipe-passport.sociobot.in';
 const expectedOrigin = new URL(base).origin;
+const canonicalOrigin = process.env.CANONICAL_ORIGIN || 'https://recipe-passport.sociobot.in';
 const browser = await chromium.launch({ headless: true });
+
+function isStaticAppRequest(request) {
+  const url = new URL(request.url);
+  if (url.origin !== expectedOrigin || request.method !== 'GET' || request.postData) return false;
+  return [
+    '/', '/index.html', '/demo', '/add', '/cookbook', '/privacy', '/terms', '/recipe', '/build-info.json',
+    '/demo/recipe/sample-braised-beans', '/demo/recipe/sample-lemon-cake',
+    '/demo/recipe/sample-noodle-salad', '/missing-offline-shell', '/favicon.svg',
+    '/404.css', '/apple-touch-icon.png', '/manifest.webmanifest', '/robots.txt', '/sw.js',
+  ].includes(url.pathname) || url.pathname.startsWith('/assets/');
+}
 
 try {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   const errors = [];
   const origins = new Set();
+  const requests = [];
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  page.on('request', (request) => origins.add(new URL(request.url()).origin));
+  context.on('request', (request) => {
+    origins.add(new URL(request.url()).origin);
+    requests.push({ url: request.url(), method: request.method(), postData: request.postData() });
+  });
 
   await page.goto(`${base}/`, { waitUntil: 'networkidle' });
   const firstScreen = [
@@ -133,7 +149,7 @@ try {
     const response = await page.goto(`${base}${route}`);
     if (!response?.ok()) throw new Error(`${route} did not return 200.`);
     if (await page.title() !== title) throw new Error(`${route} title is inaccurate.`);
-    const canonical = `${base}${route}`;
+    const canonical = `${canonicalOrigin}${route}`;
     for (const [selector, attribute] of [
       ['link[rel="canonical"]', 'href'], ['meta[property="og:url"]', 'content'],
     ]) {
@@ -146,6 +162,22 @@ try {
     if (results.violations.some((violation) => ['serious', 'critical'].includes(violation.impact || ''))) throw new Error(`${route} has a serious accessibility violation.`);
   }
 
+  const sourceUrls = [
+    'https://example.com/live-lentils',
+    'https://example.com/warm-lentils',
+    'https://example.com/olive-pasta',
+  ];
+  const sourceOrigins = new Set(sourceUrls.map((url) => new URL(url).origin));
+  if (requests.some((request) => sourceUrls.includes(request.url) || sourceOrigins.has(new URL(request.url).origin))) {
+    throw new Error('A recipe source URL was fetched; Recipe Passport must not scrape recipe sites.');
+  }
+  if (requests.some((request) => request.method !== 'GET' || request.postData)) {
+    throw new Error('A non-static request was made; Recipe Passport must not upload or host recipe data.');
+  }
+  const unexpectedStaticRequest = requests.find((request) => !isStaticAppRequest(request));
+  if (unexpectedStaticRequest) {
+    throw new Error(`Unexpected analytics, ads, or telemetry request: ${unexpectedStaticRequest.method} ${unexpectedStaticRequest.url}`);
+  }
   if (errors.length) throw new Error(`Console errors: ${errors.join(' | ')}`);
   if ([...origins].some((origin) => origin !== expectedOrigin)) throw new Error(`Third-party request observed: ${[...origins].join(', ')}`);
   await context.close();
@@ -162,7 +194,7 @@ try {
   if (new URL(notFoundPage.url()).pathname !== '/') throw new Error('The live 404 return link failed.');
   await notFoundContext.close();
 
-  process.stdout.write('LIVE PASS: first screen, query demo/reset/isolation, offline, claims, metadata, Axe, privacy, mobile, and HTTP 404\n');
+  process.stdout.write('LIVE PASS: first screen, query demo/reset/isolation, offline, claims, no scraping/hosting/tracking, metadata, Axe, privacy, mobile, and HTTP 404\n');
 } finally {
   await browser.close();
 }

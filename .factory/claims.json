@@ -91,6 +91,27 @@
     "sandbox": "fresh browser context; enter demo and real add flow without encountering sign-in or account controls"
   },
   {
+    "id": "no-scraping",
+    "claim": "Does not fetch recipes from recipe sites.",
+    "where": "landing page, terms page, README",
+    "test": "npm test -- --grep @claim:no-scraping",
+    "sandbox": "fresh browser context; add a demo recipe and a real recipe with external source URLs; intercept requests and assert neither source URL nor any external recipe site is requested"
+  },
+  {
+    "id": "no-hosting",
+    "claim": "Does not upload or host your recipes.",
+    "where": "landing page, terms page, README",
+    "test": "npm test -- --grep @claim:no-hosting",
+    "sandbox": "fresh browser context; save marked demo and real recipes with external source URLs; intercept all requests and assert no recipe URL is fetched and no request body or non-GET request uploads recipe data"
+  },
+  {
+    "id": "no-tracking",
+    "claim": "Has no analytics, ads, or telemetry.",
+    "where": "footer, privacy page, README",
+    "test": "npm test -- --grep @claim:no-tracking",
+    "sandbox": "fresh browser context; run the demo and import a local file into a real cookbook; intercept the full flow and allow only same-origin static app documents, assets, and the service worker"
+  },
+  {
     "id": "export-import-roundtrip",
     "claim": "Imports Recipe Passport JSON exports without losing recipes or saved fields.",
     "where": "import page, README",

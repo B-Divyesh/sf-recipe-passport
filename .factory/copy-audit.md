@@ -1,6 +1,6 @@
 # Landing-page copy audit
 
-Audited 28 August 2026 for polish round 2. Counts treat contractions and
+Audited 28 August 2026 for polish round 3. Counts treat contractions and
 hyphenated words as one word. No sentence is over 22 words or uses a banned
 marketing word.
 
@@ -27,11 +27,11 @@ marketing word.
 | Print one recipe or export the whole cookbook as JSON. | 10 | Pass |
 | Your cookbook does not need an account. | 7 | Pass |
 | Recipe Passport processes your files in this browser. | 8 | Pass |
-| It does not scrape recipe sites or publish your recipes. | 10 | Pass |
+| It does not scrape recipe sites or publish your recipes. | 10 | Pass — no-scraping / no-hosting |
 | Export a complete JSON copy before clearing browser data or changing devices. | 12 | Pass |
 | Artwork generated for Recipe Passport. | 5 | Pass — plain wording |
-| No tracking. | 2 | Pass — tested privacy fact |
-| No fonts load from other sites. | 6 | Pass — plain wording |
+| No tracking. | 2 | Pass — no-tracking |
+| No fonts load from other sites. | 6 | Pass — no-tracking |
 
 ## First-screen read-aloud check
 
@@ -52,4 +52,4 @@ checks assert every required item is above the fold.
 | Ordered cooking instructions | steps |
 | Original attribution | source |
 
-Catalog description: **Move recipes into a private cookbook you can search, print, and keep on this device.** (14 words, 86 characters)
+Catalog description: **Move recipes into a private cookbook you can search, print, and export.** (12 words, 73 characters)
