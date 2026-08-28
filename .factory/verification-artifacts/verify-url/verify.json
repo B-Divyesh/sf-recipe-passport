@@ -1,0 +1,14 @@
+{
+  "url": "https://recipe-passport.sociobot.in",
+  "loadMs": 760,
+  "errors": [],
+  "a11y": {
+    "title": "Recipe Passport — move recipes into your cookbook",
+    "lang": "en",
+    "h1": 1,
+    "main": true,
+    "imgsMissingAlt": 0,
+    "buttonsUnlabeled": 0,
+    "textLength": 1741
+  }
+}

@@ -1,4 +1,18 @@
-# Recipe Passport v1 handoff
+# Recipe Passport independent verification handoff — FAIL
+
+Independent verification completed 28 August 2026 for work order `recipe-passport-verify-1`.
+
+**Verdict: FAIL — do not release candidate `b240f21ceed1e946e754366687c2b9bc66c16c91`.**
+
+The requested commit cannot be fetched from the configured GitHub remote; remote `main` is still `ad5417ffec4b0994c639bbab32f216aebf503950`. The live artifact differs from that checkout and exposes no commit identity, so it cannot be confirmed as the candidate. The live app also falsely reports success for a valid 5.6 MB import that exceeds browser storage quota and disappears on reload. Its export shape and permanent-delete behavior contradict the available claim tests.
+
+Additional findings: browser Back/Forward loses route focus, several mobile targets are below 44 × 44 CSS pixels, hashed assets receive only 30-second caching, and one sample source link is dead. The cold first-read and one-click demo pass. Normal Paprika import retains 100% of required fields. Offline reload, privacy/network checks, axe, reduced motion, console health, production-size budgets, and the available base checkout's 24 tests pass.
+
+Full evidence, severities, fingerprints, commands, and metrics: [`.factory/verification.md`](verification.md). No product code was modified during verification.
+
+---
+
+# Original builder handoff
 
 Completed 28 August 2026 for work order `recipe-passport-build-1`.
 
