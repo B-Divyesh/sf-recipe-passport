@@ -1,3 +1,24 @@
+# Recipe Passport verification handoff — PASS
+
+Independent verification completed 28 August 2026 for candidate
+`4c67a47953813f36af3d47d669193f914e55054b` at
+<https://recipe-passport.sociobot.in>.
+
+**PASS.** The live build identity, service-worker cache, and byte-identical
+JS/CSS assets match the requested commit. All 12 required claim commands,
+the full 5-unit/24-browser test suite, typecheck, lint, and production build
+pass. Live import/manual-add/search/export/print/edit/delete-undo/demo
+isolation, invalid-input recovery, offline reload, 390 px keyboard use,
+serious/critical Axe checks, headers, caching, privacy/network behavior, and
+bundle budgets passed. No product defects were found at any severity.
+
+See `.factory/verification-2.md` for exact commands, evidence, coverage, and
+the only non-product limitation: the standalone Lighthouse runner could not
+run because its container Chromium tab crashed; in-browser LCP observation
+was 124 ms and all other performance budgets passed.
+
+---
+
 # Recipe Passport repair handoff
 
 Completed 28 August 2026 for `recipe-passport-repair-1`.
