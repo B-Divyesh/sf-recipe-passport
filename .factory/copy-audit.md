@@ -52,4 +52,4 @@ checks assert every required item is above the fold.
 | Ordered cooking instructions | steps |
 | Original attribution | source |
 
-Catalog description: **Move recipes into a private cookbook you can search, print, and export.** (12 words, 73 characters)
+Catalog description: **Move recipes into a private cookbook you can search, print, and export.** (12 words, 71 characters)
