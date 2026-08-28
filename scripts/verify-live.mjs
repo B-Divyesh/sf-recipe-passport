@@ -56,6 +56,9 @@ try {
   await page.reload();
   const poisoned = await page.goto(`${base}/missing-offline-shell`);
   if (poisoned?.status() !== 404) throw new Error('The offline regression setup did not receive an HTTP 404.');
+  // The intentional bad-link response is a browser console network error, not
+  // an app-script error. Clear it before checking the subsequent offline app.
+  errors.length = 0;
   await context.setOffline(true);
   await page.goto(`${base}/add`);
   await page.getByRole('heading', { name: 'Add recipes to your cookbook.' }).waitFor();
@@ -63,12 +66,6 @@ try {
   await page.reload();
   await page.getByRole('heading', { name: 'Tomato-braised butter beans' }).waitFor();
   await context.setOffline(false);
-
-  await page.goto(`${base}/add`);
-  await page.getByLabel('Paste full recipe text').fill(`Quick tomato soup\nServes 2\n\nIngredients\n2 tomatoes\n1 onion\n\nMethod\nCook the onion.\nBlend the soup.`);
-  await page.getByRole('button', { name: 'Fill recipe fields from paste' }).click();
-  if (await page.getByLabel(/Recipe title/).inputValue() !== 'Quick tomato soup') throw new Error('One-paste intake did not fill the title.');
-  if (await page.getByLabel(/Ingredients/).inputValue() !== '2 tomatoes\n1 onion') throw new Error('One-paste intake did not fill ingredients.');
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export cookbook' }).click();
@@ -81,6 +78,12 @@ try {
   await page.waitForURL(`${base}/cookbook`);
   const imported = await page.evaluate(() => JSON.parse(localStorage.getItem('recipe-passport:v1:recipes') || '[]'));
   if (JSON.stringify(imported) !== JSON.stringify(exported.recipes)) throw new Error('Recipe Passport export/import changed a saved field.');
+
+  await page.goto(`${base}/add`);
+  await page.getByLabel('Paste full recipe text').fill(`Quick tomato soup\nServes 2\n\nIngredients\n2 tomatoes\n1 onion\n\nMethod\nCook the onion.\nBlend the soup.`);
+  await page.getByRole('button', { name: 'Fill recipe fields from paste' }).click();
+  if (await page.getByLabel(/Recipe title/).inputValue() !== 'Quick tomato soup') throw new Error('One-paste intake did not fill the title.');
+  if (await page.getByLabel(/Ingredients/).inputValue() !== '2 tomatoes\n1 onion') throw new Error('One-paste intake did not fill ingredients.');
 
   await page.evaluate(() => localStorage.clear());
   await page.goto(`${base}/add`);

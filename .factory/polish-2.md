@@ -37,5 +37,12 @@ wildcard soft-404 routes.
 - Playwright Axe checks pass on landing, demo, sample recipe, Privacy, Terms,
   and 404 with no serious or critical findings.
 
-The post-push clean-clone claim log and the cold live deployment recheck are
-recorded in the handoff for the final commit.
+## Deployed evidence
+
+Azure Static Web Apps deployment `11109893-9595-4474-a932-d14a3f2d77bf`
+published product build `5a08bc9b8d3c82c1c466f1e73b5916f992142561`.
+`npm run verify:live` and `/opt/fleet/lib/verify-url.sh` both passed against a
+cold `https://recipe-passport.sociobot.in`. The live verifier covers every
+mapping above, including unknown recipe HTTP 404s, the offline poisoning
+sequence, desktop fold, isolated demo data, one-paste intake, route metadata,
+Axe, privacy, and legal links.

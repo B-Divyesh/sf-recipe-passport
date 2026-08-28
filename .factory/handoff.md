@@ -1,7 +1,7 @@
 # Recipe Passport polish 2 handoff
 
 Completed 28 August 2026 for work order `recipe-passport-polish-2`.
-Repair commit: `59beb37a1988dca21a2f5916dd8628c4d738d800`.
+Product repair commit: `59beb37a1988dca21a2f5916dd8628c4d738d800`.
 
 ## Delivered
 
@@ -58,7 +58,25 @@ trigger. After the trigger completes, run:
 npm run verify:live
 ```
 
+## Deployment and cold live evidence
+
+- Deployed through `/opt/fleet/lib/deploy-static.sh recipe-passport
+  /work/repo/dist` to Azure Static Web Apps deployment
+  `11109893-9595-4474-a932-d14a3f2d77bf`.
+- The deployed product build ID is
+  `5a08bc9b8d3c82c1c466f1e73b5916f992142561`.
+- `npm run verify:live`: pass. It cold-checks the 390 px and 1440 px first
+  screens, query demo/banner/reset, real-data isolation, same-origin privacy,
+  the poisoned-shell offline sequence, all exercised recipe flows, one-paste
+  intake, route metadata, Axe, and all three HTTP 404 forms.
+- `/opt/fleet/lib/verify-url.sh https://recipe-passport.sociobot.in
+  /tmp/recipe-passport-verify-live`: pass; 574 ms load, no console errors,
+  correct title/lang/main/h1/alts/button names.
+- Manual HTTP check: `/recipe/not-a-real-recipe` returns 404; its raw 404
+  document has the designed header, footer, canonical, and Return home link.
+
 ## Remaining work
 
-No source or test finding remains. The final post-push cold live check and its
-deployed build ID are appended after deployment completes.
+None. The live product was rechecked cold after deployment and every review
+finding, including the earlier cumulative findings, is covered by passing
+evidence.
