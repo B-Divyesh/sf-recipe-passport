@@ -1,53 +1,64 @@
-# Recipe Passport review 2 handoff — FAIL
+# Recipe Passport polish 2 handoff
 
-Completed 28 August 2026 for work order `recipe-passport-review-2` against
-commit `aef13759872af439b8b8708b2b12d6679ba514d6` and the matching live build.
+Completed 28 August 2026 for work order `recipe-passport-polish-2`.
+Repair commit: `59beb37a1988dca21a2f5916dd8628c4d738d800`.
 
-## What was done
+## Delivered
 
-- Wrote the full adversarial review in `.factory/review-2.md`.
-- Tested cold first reads at 390 × 844 and 1440 × 900.
-- Audited every landing-page and README sentence/label with word counts.
-- Ran every registered claim command separately from fresh clone
-  `/tmp/recipe-passport-review2-clean.exhVO9`.
-- Exercised demo reset, pre-existing real-data isolation, Start for real,
-  same-origin privacy, service-worker offline behavior, deep links, browser
-  history focus, metadata, 404s, links, mobile layout, and accessibility on the
-  live deployment.
-- Read and rechecked every prior review, polish, verification, and handoff
-  finding against live behavior and source.
-- Made no product-code changes.
+- Closed every F-2-1 through F-2-13 finding in `.factory/review-2.md`; the
+  finding-by-finding map is in `.factory/polish-2.md`.
+- Replaced wildcard recipe rewrites with fixed static query routes, so unknown
+  recipe path URLs return a true styled 404 with not-found metadata.
+- Made the service-worker shell immutable after install; an HTTP 404 can no
+  longer replace the shell used for offline app routes.
+- Added a local, one-paste recipe intake that fills editable fields from title,
+  Ingredients, and Method sections. It makes no network request.
+- Strengthened the demo-isolation, JSON export, search, offline, route, desktop
+  fold, sitemap, 404-shell, and accessibility checks.
+- Updated public and developer copy, catalog description, README, demo contract,
+  404 shell, and claim register. The visual paper archive/passport identity is
+  preserved.
 
-## Verification
+## Exact local evidence
+
+Fresh clone: `/tmp/recipe-passport-polish2-clean` from repair commit
+`59beb37a1988dca21a2f5916dd8628c4d738d800`.
+
+- `npm ci`: pass, zero vulnerabilities.
+- Every one of the 16 literal claim commands in `.factory/claims.json` passed
+  separately from that clone: paprika-import, manual-add, paste-recipe,
+  search-cookbook, json-export, print-recipe, offline-reload, local-only,
+  demo-isolation, free-use, recipe-management, ingredient-check, no-account,
+  export-import-roundtrip, source-retention, and recipe-fields.
+- `CI=1 npm test`: pass — 8 unit tests and 33 Chromium tests.
+- `CI=1 npm run lint` and `CI=1 npm run build`: pass. `dist/index.html` is at
+  the required root.
+- Build payload: JavaScript 10,974 bytes gzip; CSS 4,921 bytes gzip.
+- `/opt/fleet/lib/verify-url.sh http://127.0.0.1:4173
+  /tmp/recipe-passport-verify-local`: pass; 580 ms load, correct title/lang,
+  one main and h1, all images have alternatives, labelled buttons, no errors.
+- Playwright Axe integration: no serious or critical violations on home, demo,
+  sample recipe, Privacy, Terms, or 404. The standalone Axe CLI could not find
+  a Chrome binary in this container; the project’s pinned Playwright Chromium
+  Axe checks are the recorded accessibility evidence.
+
+## Run and deploy
 
 ```sh
 npm ci
 npm test
 npm run build
-npm run verify:live
-
-mkdir -p /tmp/recipe-passport-review2-verify-url
-VERIFY_NODE_MODULES=/work/repo/node_modules \
-  /opt/fleet/lib/verify-url.sh https://recipe-passport.sociobot.in \
-  /tmp/recipe-passport-review2-verify-url
 ```
 
-Results: 7 unit and 29 Chromium tests pass; all 15 claim commands pass
-individually; build succeeds; the standard live verifier and URL verifier pass;
-live Axe checks report no serious or critical finding. JavaScript is 10,104
-bytes gzip and CSS is 4,810 bytes gzip.
+Deploy `dist/` as an Azure Static Web Apps artifact. The repository has no
+checked-in deployment workflow; pushing `main` is the work-order deployment
+trigger. After the trigger completes, run:
 
-## What remains
+```sh
+npm run verify:live
+```
 
-The verdict is **FAIL** with 13 findings. Two are blocking:
+## Remaining work
 
-1. Unknown recipe IDs return HTTP 200 with unrelated raw metadata, reopening
-   the substance of F-1-1.
-2. A fetched 404 replaces the service worker's cached `/index.html`; a fresh
-   app route can then render the static 404 while offline, disproving the broad
-   offline claim.
-
-The remaining findings cover the desktop fold, incomplete claim assertions,
-an unlisted JSON-array promise, 404 shell consistency, sitemap omissions, the
-missing one-paste recipe path, and plain-word terminology. Exact evidence and
-required fixes are in `.factory/review-2.md`.
+No source or test finding remains. The final post-push cold live check and its
+deployed build ID are appended after deployment completes.
