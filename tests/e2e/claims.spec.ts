@@ -37,10 +37,12 @@ test('@claim:manual-add saves a pasted structured recipe', async ({ page }) => {
 
 test('@claim:search-cookbook searches by ingredient', async ({ page }) => {
   await page.goto('/demo');
-  await page.getByLabel('Search your cookbook').fill('tahini');
-  await expect(page.getByText('1 recipe')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Cold sesame noodle salad' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Tomato-braised butter beans' })).toHaveCount(0);
+  const search = page.getByLabel('Search your cookbook');
+  for (const query of ['tahini', 'Baking', 'yogurt', 'Family recipe card', 'Lemon olive oil cake']) {
+    await search.fill(query);
+    await expect(page.getByText('1 recipe')).toBeVisible();
+  }
+  await expect(page.getByRole('heading', { name: 'Lemon olive oil cake' })).toBeVisible();
 });
 
 test('@claim:json-export downloads every demo recipe as JSON', async ({ page }) => {
@@ -53,8 +55,9 @@ test('@claim:json-export downloads every demo recipe as JSON', async ({ page }) 
   const data = JSON.parse(await readFile(file!, 'utf8'));
   expect(data.schema).toBe('recipe-passport/v1');
   expect(data.recipes).toHaveLength(3);
-  expect(data.recipes[0]).toHaveProperty('ingredients');
-  expect(data.recipes[0]).toHaveProperty('sourceName');
+  expect(Object.keys(data.recipes[0]).sort()).toEqual([
+    'categories', 'createdAt', 'id', 'ingredients', 'notes', 'sourceName', 'sourceUrl', 'steps', 'title', 'updatedAt', 'yield',
+  ]);
 });
 
 test('@claim:print-recipe opens the browser print flow', async ({ page }) => {
@@ -84,6 +87,8 @@ test('@claim:local-only makes no third-party request and keeps real storage empt
   expect([...origins]).toEqual(['http://127.0.0.1:4173']);
   expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBeNull();
   expect(await page.evaluate(() => sessionStorage.getItem('demo:recipe-passport:v1:recipes'))).not.toBeNull();
+  expect(await page.locator('script[src^="http"]').count()).toBe(0);
+  expect(await page.locator('link[rel="stylesheet"][href^="http"]').count()).toBe(0);
 });
 
 test('@claim:demo-isolation discards demo changes before real use', async ({ page }) => {
@@ -102,9 +107,23 @@ test('@claim:demo-isolation discards demo changes before real use', async ({ pag
   expect(values).toEqual({ demo: null, real: null });
 });
 
-test('@claim:free-use presents no purchase or license gate', async ({ page }) => {
+test('@claim:free-use @claim:no-account presents no price or account gate', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('Price: free')).toBeVisible();
   await expect(page.getByRole('link', { name: /buy|purchase|subscribe|license/i })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /buy|purchase|subscribe|license/i })).toHaveCount(0);
+  await page.getByRole('link', { name: 'Import your recipes' }).click();
+  await expect(page).toHaveURL(/\/add$/);
+  await expect(page.getByText(/sign in|create account/i)).toHaveCount(0);
+});
+
+test('@claim:ingredient-check keeps cooking checks temporary', async ({ page }) => {
+  await page.goto('/demo/recipe/sample-braised-beans');
+  const ingredient = page.getByLabel('2 tablespoons olive oil');
+  await ingredient.check();
+  await expect(ingredient).toBeChecked();
+  await page.reload();
+  await expect(page.getByLabel('2 tablespoons olive oil')).not.toBeChecked();
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem('demo:recipe-passport:v1:recipes') ?? '[]'));
+  expect(saved.find((recipe: { id: string }) => recipe.id === 'sample-braised-beans').ingredients[0]).toBe('2 tablespoons olive oil');
 });

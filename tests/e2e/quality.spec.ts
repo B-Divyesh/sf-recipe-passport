@@ -49,7 +49,7 @@ test('shows useful empty and import error states', async ({ page }) => {
   await expect(page.getByRole('status')).toContainText('Choose an unencrypted Paprika JSON export');
 });
 
-test('edits, deletes, and restores a recipe', async ({ page }) => {
+test('@claim:recipe-management edits, deletes, and restores a recipe', async ({ page }) => {
   await page.goto('/demo/recipe/sample-braised-beans');
   await page.getByRole('link', { name: 'Edit recipe' }).click();
   await page.getByLabel(/Recipe title/).fill('Tomato-braised giant beans');
