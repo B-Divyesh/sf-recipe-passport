@@ -61,10 +61,11 @@ npm run verify:live
 ## Deployment and cold live evidence
 
 - Deployed through `/opt/fleet/lib/deploy-static.sh recipe-passport
-  /work/repo/dist` to Azure Static Web Apps deployment
-  `11109893-9595-4474-a932-d14a3f2d77bf`.
-- The deployed product build ID is
-  `5a08bc9b8d3c82c1c466f1e73b5916f992142561`.
+  /work/repo/dist` twice: product repair deployment
+  `11109893-9595-4474-a932-d14a3f2d77bf`, then final evidence deployment
+  `5d07d323-19b4-4b42-955f-539aa3091552`.
+- The final deployed product build ID is
+  `a114361549287d665cbbd18f1e505cef073ecea1`.
 - `npm run verify:live`: pass. It cold-checks the 390 px and 1440 px first
   screens, query demo/banner/reset, real-data isolation, same-origin privacy,
   the poisoned-shell offline sequence, all exercised recipe flows, one-paste
