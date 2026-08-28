@@ -2,11 +2,12 @@
 
 ## Entry point
 
-- Live: `https://recipe-passport.sociobot.in/demo`
+- One-click entry: `https://recipe-passport.sociobot.in/?demo=1`
+- Persistent demo route: `https://recipe-passport.sociobot.in/demo`
 - Local: `http://localhost:5173/demo`
-- Query alias: `/?demo=1` redirects to `/demo`.
+- The query entry redirects to `/demo` before the sample cookbook is used.
 
-The first click from the landing page is **Try it with sample data**. It opens the populated cookbook without an account or setup.
+The first click from the landing page is **Try it with sample data**. Its `/?demo=1` link opens the populated cookbook without an account or setup.
 
 ## Sample data
 
