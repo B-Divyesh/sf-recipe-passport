@@ -1,0 +1,14 @@
+{
+  "slug": "recipe-passport",
+  "title": "Recipe Passport",
+  "summary": "Move your recipes into a private offline cookbook.",
+  "artifact_class": "static-web",
+  "monetization": "free",
+  "job": "Import Paprika JSON or paste a recipe, then search, print, and export an owned local cookbook.",
+  "constraints": [
+    "Process user-provided content in the browser",
+    "Keep recipe provenance",
+    "Do not scrape recipe pages",
+    "Do not require an account"
+  ]
+}
