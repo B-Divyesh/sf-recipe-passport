@@ -15,7 +15,7 @@ This suits the product because portability is emotional as well as technical. Th
 - `--tomato: #b92e27` — passport cover and primary action.
 - `--tomato-dark: #7f1f1a` — hover and dark accents.
 - `--cream: #fffaf0` — high surface and text on tomato.
-- `--herb: #245d43` — success, active tags, and focus reinforcement.
+- `--herb: #245d43` — success, active tags, and the high-contrast focus ring on paper surfaces.
 - `--mustard: #c58b22` — warnings and small editorial marks.
 - `--danger: #9d2924` — destructive states, paired with words and icons.
 - Dark treatment: `--night: #13211e`, `--night-surface: #1d302b`, `--night-text: #f7f0df`. It appears in the footer, demo banner, and image framing rather than as a user toggle. The thesis is intentionally a single-mode, paper-first reading surface because printed continuity is part of the job.

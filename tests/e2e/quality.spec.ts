@@ -1,6 +1,27 @@
 import AxeBuilder from '@axe-core/playwright';
 import { execFileSync } from 'node:child_process';
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator } from '@playwright/test';
+
+async function expectTouchTarget(target: Locator): Promise<void> {
+  const box = await target.boundingBox();
+  expect(box, `Missing touch target: ${await target.evaluate((element) => element.outerHTML)}`).not.toBeNull();
+  expect(box?.width).toBeGreaterThanOrEqual(44);
+  expect(box?.height).toBeGreaterThanOrEqual(44);
+}
+
+function contrastRatio(first: string, second: string): number {
+  const channel = (value: number): number => {
+    const normalized = value / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+  const luminance = (value: string): number => {
+    const channels = value.match(/[\d.]+/g)?.slice(0, 3).map(Number) ?? [];
+    if (channels.length !== 3) throw new Error(`Cannot parse color: ${value}`);
+    return 0.2126 * channel(channels[0]) + 0.7152 * channel(channels[1]) + 0.0722 * channel(channels[2]);
+  };
+  const [light, dark] = [luminance(first), luminance(second)].sort((a, b) => b - a);
+  return (light + 0.05) / (dark + 0.05);
+}
 
 for (const route of ['/', '/demo', '/demo/recipe/sample-braised-beans', '/privacy', '/terms']) {
   test(`has a sound document and no serious accessibility issues on ${route}`, async ({ page }) => {
@@ -21,15 +42,27 @@ test('serves a real styled HTTP 404 with a working return path', async ({ page }
   const response = await page.goto('/missing-page');
   expect(response?.status()).toBe(404);
   await expect(page).toHaveTitle('Not found — Recipe Passport');
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('This recipe card slipped away.');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found.');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('main')).toHaveCount(1);
   await expect(page.getByText('Private cookbook stored in your browser.')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main')).toBeFocused();
   await page.getByRole('link', { name: 'Return home' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Move your recipes into a private cookbook.');
+});
+
+test('uses direct not-found copy in both the static and app 404 views', async ({ page }) => {
+  await page.goto('/missing-page');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found.');
+  await page.goto('/recipe');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Page not found.');
+  await expect(page.getByText('This recipe card slipped away.', { exact: true })).toHaveCount(0);
 });
 
 test('uses plain, descriptive landing headings and footer copy', async ({ page }) => {
@@ -67,6 +100,46 @@ test('reloads a stored recipe from the real query route', async ({ page }) => {
   const response = await page.goto('/recipe?id=saved-route-test');
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Stored route soup');
+});
+
+test('opens a filtered real recipe without dropping its id query', async ({ page }) => {
+  await page.goto('/add');
+  await page.getByLabel(/Recipe title/).fill('Search click lentil soup');
+  await page.getByLabel(/Ingredients/).fill('200 g lentils\n1 onion');
+  await page.getByLabel(/Steps/).fill('Cook the lentils.\nServe warm.');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  const savedUrl = page.url();
+  const savedId = new URL(savedUrl).searchParams.get('id');
+  expect(savedId).toBeTruthy();
+  await page.getByRole('link', { name: /Back to cookbook/ }).click();
+  await page.getByLabel('Search your cookbook').fill('lentils');
+  await expect(page.getByText('1 recipe')).toBeVisible();
+  const result = page.getByRole('link', { name: 'Open Search click lentil soup' });
+  await expect(result).toHaveAttribute('href', `/recipe?id=${savedId}`);
+  await result.click();
+  await expect(page).toHaveURL(new RegExp(`/recipe\\?id=${savedId}$`));
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Search click lentil soup');
+});
+
+test('constrains entered titles and safely reflows imported long titles and metadata', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/add');
+  const titleField = page.getByLabel(/Recipe title/);
+  await expect(titleField).toHaveAttribute('maxlength', '120');
+  await titleField.fill('T'.repeat(200));
+  expect((await titleField.inputValue()).length).toBe(120);
+
+  const longTitle = 'L'.repeat(200);
+  await page.evaluate((title) => localStorage.setItem('recipe-passport:v1:recipes', JSON.stringify([{
+    id: 'long-title', title, yield: '', categories: [], ingredients: ['1 onion'], steps: ['Cook it.'], notes: '', sourceName: '', sourceUrl: '', createdAt: '2026-08-29T00:00:00.000Z', updatedAt: '2026-08-29T00:00:00.000Z',
+  }])), longTitle);
+  await page.goto('/recipe?id=long-title');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(longTitle);
+  expect(await page.evaluate(() => document.body.scrollWidth)).toBeLessThanOrEqual(390);
+  expect((await page.title()).length).toBeLessThanOrEqual(60);
+  await expect(page).toHaveTitle(/… — Recipe Passport$/);
+  const description = await page.locator('meta[name="description"]').getAttribute('content');
+  expect(description?.length).toBeLessThanOrEqual(155);
 });
 
 test('serves and maintains route-accurate share metadata', async ({ page }) => {
@@ -151,9 +224,7 @@ test('works with a keyboard and keeps every required touch target at 390 CSS pix
     page.getByRole('link', { name: 'Privacy' }).last(),
     page.getByRole('link', { name: 'Terms' }),
   ]) {
-    const box = await target.boundingBox();
-    expect(box?.width).toBeGreaterThanOrEqual(44);
-    expect(box?.height).toBeGreaterThanOrEqual(44);
+    await expectTouchTarget(target);
   }
 
   await page.goto('/demo/recipe/sample-braised-beans');
@@ -162,6 +233,71 @@ test('works with a keyboard and keeps every required touch target at 390 CSS pix
   expect(ingredient?.height).toBeGreaterThanOrEqual(44);
   const ingredientRow = await page.locator('.ingredient-list li').first().boundingBox();
   expect(ingredientRow?.height).toBeGreaterThanOrEqual(44);
+});
+
+test('keeps every verifier-reported mobile link target at least 44 by 44 pixels', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expectTouchTarget(page.locator('.site-header').getByRole('link', { name: 'Demo' }));
+  await expectTouchTarget(page.getByRole('link', { name: 'Read the privacy note' }));
+  await expectTouchTarget(page.locator('.build-id a'));
+
+  await page.goto('/add');
+  await expectTouchTarget(page.getByRole('link', { name: 'Cancel' }));
+  await page.goto('/privacy');
+  await expectTouchTarget(page.getByRole('link', { name: 'privacy@sociobot.in' }));
+  await page.goto('/terms');
+  await expectTouchTarget(page.getByRole('link', { name: 'hello@sociobot.in' }));
+
+  await page.evaluate(() => localStorage.setItem('recipe-passport:v1:recipes', JSON.stringify([{
+    id: 'source-target', title: 'Source target soup', yield: '', categories: [], ingredients: ['1 onion'], steps: ['Cook it.'], notes: '', sourceName: 'Kitchen notebook', sourceUrl: 'https://example.com/soup', createdAt: '2026-08-29T00:00:00.000Z', updatedAt: '2026-08-29T00:00:00.000Z',
+  }])));
+  await page.goto('/recipe?id=source-target');
+  await expectTouchTarget(page.getByRole('link', { name: /Open source/ }));
+
+  await page.goto('/missing-page');
+  await expectTouchTarget(page.locator('.site-header').getByRole('link', { name: 'Demo' }));
+});
+
+test('uses focus indicators with at least 3 to 1 adjacent contrast', async ({ page }) => {
+  const expectFocusContrast = async (target: Locator, background: string): Promise<void> => {
+    await target.focus();
+    const outline = await target.evaluate((element) => getComputedStyle(element).outlineColor);
+    expect(contrastRatio(outline, background)).toBeGreaterThanOrEqual(3);
+  };
+
+  await page.goto('/');
+  await expectFocusContrast(page.getByRole('link', { name: 'Try it with sample data' }), 'rgb(244, 238, 223)');
+  await page.goto('/add');
+  await expectFocusContrast(page.getByLabel(/Recipe title/), 'rgb(244, 238, 223)');
+  await page.goto('/demo');
+  await expectFocusContrast(page.getByRole('button', { name: 'Reset demo' }), 'rgb(19, 33, 30)');
+  await expectFocusContrast(page.locator('.site-footer').getByRole('link', { name: 'Privacy' }), 'rgb(19, 33, 30)');
+  await page.goto('/missing-page');
+  await expectFocusContrast(page.locator('.site-header').getByRole('link', { name: 'Demo' }), 'rgb(244, 238, 223)');
+});
+
+test('removes the undo control from keyboard order when its toast expires', async ({ page }) => {
+  await page.goto('/demo/recipe/sample-braised-beans');
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: 'Delete recipe' }).click();
+  const undo = page.getByRole('button', { name: 'Undo' });
+  await expect(undo).toBeVisible();
+  await expect(undo).toBeFocused();
+  await expect(undo).toHaveCount(0, { timeout: 7_000 });
+  await expect(page.locator('.toast')).toHaveAttribute('aria-hidden', 'true');
+});
+
+test('reports malformed source URLs and focuses the field that needs repair', async ({ page }) => {
+  await page.goto('/add');
+  await page.getByLabel(/Recipe title/).fill('Malformed source soup');
+  await page.getByLabel(/Ingredients/).fill('1 onion');
+  await page.getByLabel(/Steps/).fill('Cook it.');
+  await page.getByLabel('Source URL').fill('not a URL');
+  await page.getByRole('button', { name: 'Add recipe' }).click();
+  await expect(page).toHaveURL(/\/add$/);
+  await expect(page.getByRole('alert')).toHaveText('The source URL needs to start with http:// or https://.');
+  await expect(page.getByLabel('Source URL')).toBeFocused();
 });
 
 test('back and forward navigation restore the route and move focus', async ({ page }) => {

@@ -6,6 +6,7 @@ import type { AppMode, Recipe } from './types';
 declare const __BUILD_SHA__: string;
 
 const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+const MAX_RECIPE_TITLE_LENGTH = 120;
 const BUILD_SHA = __BUILD_SHA__;
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
@@ -14,6 +15,7 @@ const app: HTMLDivElement = appRoot;
 
 let undoRecipe: Recipe | undefined;
 let undoMode: AppMode = 'real';
+let toastTimer: number | undefined;
 
 const escapeHtml = (value: string): string => value.replace(/[&<>'"]/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;',
@@ -103,7 +105,7 @@ function footer(): string {
 }
 
 function shell(content: string, mode: AppMode): string {
-  return `${header(mode)}${mode === 'demo' ? demoBanner() : ''}<main id="main" tabindex="-1">${content}</main>${footer()}<div class="route-announcer sr-only" aria-live="polite"></div><div class="toast" aria-live="polite"></div>`;
+  return `${header(mode)}${mode === 'demo' ? demoBanner() : ''}<main id="main" tabindex="-1">${content}</main>${footer()}<div class="route-announcer sr-only" aria-live="polite"></div><div class="toast" aria-live="polite" aria-hidden="true"></div>`;
 }
 
 function setMetadata(title: string, description: string, path: string): void {
@@ -265,14 +267,14 @@ function recipeForm(mode: AppMode): string {
         <div class="manual-heading"><p class="section-number">${existing ? 'Recipe' : '02'}</p><h2 id="manual-title">${existing ? 'Recipe details' : 'Paste a full recipe'}</h2></div>
         ${existing ? '' : `<div class="paste-panel"><label for="full-recipe">Paste full recipe text</label><textarea id="full-recipe" rows="10" placeholder="Lemon olive oil cake\nServes 8\n\nIngredients\n200 g flour\n\nMethod\nWhisk the batter.\nBake until golden."></textarea><p>Recipe Passport fills the editable fields from a title, Ingredients, and Method section. Nothing is sent anywhere.</p><button class="button secondary" type="button" data-action="parse-paste">Fill recipe fields from paste</button><p class="form-status" id="paste-status" role="status"></p></div>`}
         <form id="recipe-form" novalidate data-edit-id="${existing ? escapeHtml(existing.id) : ''}">
-          <div class="field full"><label for="title">Recipe title <span>required</span></label><input id="title" name="title" required value="${v('title')}" autocomplete="off" /></div>
+          <div class="field full"><label for="title">Recipe title <span>required · ${MAX_RECIPE_TITLE_LENGTH} characters maximum</span></label><input id="title" name="title" required maxlength="${MAX_RECIPE_TITLE_LENGTH}" aria-describedby="form-error" value="${v('title')}" autocomplete="off" /></div>
           <div class="field"><label for="yield">Yield</label><input id="yield" name="yield" value="${v('yield')}" placeholder="Serves 4" /></div>
           <div class="field"><label for="categories">Categories</label><input id="categories" name="categories" value="${list('categories')}" placeholder="Dinner, vegetarian" /></div>
-          <div class="field"><label for="ingredients">Ingredients <span>required · one per line</span></label><textarea id="ingredients" name="ingredients" required rows="10">${list('ingredients')}</textarea></div>
-          <div class="field"><label for="steps">Steps <span>required · one per line</span></label><textarea id="steps" name="steps" required rows="10">${list('steps')}</textarea></div>
+          <div class="field"><label for="ingredients">Ingredients <span>required · one per line</span></label><textarea id="ingredients" name="ingredients" required aria-describedby="form-error" rows="10">${list('ingredients')}</textarea></div>
+          <div class="field"><label for="steps">Steps <span>required · one per line</span></label><textarea id="steps" name="steps" required aria-describedby="form-error" rows="10">${list('steps')}</textarea></div>
           <div class="field"><label for="notes">Notes</label><textarea id="notes" name="notes" rows="5">${v('notes')}</textarea></div>
           <div class="field"><label for="sourceName">Source name</label><input id="sourceName" name="sourceName" value="${v('sourceName')}" placeholder="Family notebook" /></div>
-          <div class="field full"><label for="sourceUrl">Source URL</label><input id="sourceUrl" name="sourceUrl" type="url" value="${v('sourceUrl')}" placeholder="https://example.com/recipe" /></div>
+          <div class="field full"><label for="sourceUrl">Source URL</label><input id="sourceUrl" name="sourceUrl" type="url" aria-describedby="form-error" value="${v('sourceUrl')}" placeholder="https://example.com/recipe" /></div>
           <p class="form-error full" id="form-error" role="alert"></p>
           <div class="form-actions full"><button class="button primary" type="submit">${existing ? 'Save recipe' : 'Add recipe'}</button><a href="${routePath('/cookbook', mode)}" data-link>Cancel</a></div>
         </form>
@@ -326,7 +328,7 @@ function policyPage(kind: 'privacy' | 'terms'): string {
 function notFound(): string {
   return `
     <section class="page not-found" aria-labelledby="not-found-title">
-      <div><p class="eyebrow">Page 404</p><h1 id="not-found-title">This recipe card slipped away.</h1><p>The address does not match a page in Recipe Passport.</p><a class="button primary" href="/" data-link>Return home</a></div>
+      <div><p class="eyebrow">Page 404</p><h1 id="not-found-title">Page not found.</h1><p>The address does not match a page in Recipe Passport.</p><a class="button primary" href="/" data-link>Return home</a></div>
       <div class="lost-card" aria-hidden="true"><span>404</span><i></i><i></i><i></i></div>
     </section>`;
 }
@@ -386,10 +388,18 @@ function render(shouldFocus = false): void {
 function showToast(message: string, withUndo = false): void {
   const toast = document.querySelector<HTMLElement>('.toast');
   if (!toast) return;
+  if (toastTimer !== undefined) window.clearTimeout(toastTimer);
   toast.innerHTML = `${escapeHtml(message)}${withUndo ? ' <button type="button" data-action="undo-delete">Undo</button>' : ''}`;
+  toast.setAttribute('aria-hidden', 'false');
   toast.classList.add('show');
-  window.setTimeout(() => toast.classList.remove('show'), 6000);
   bindActionButtons(toast);
+  if (withUndo) requestAnimationFrame(() => toast.querySelector<HTMLButtonElement>('[data-action="undo-delete"]')?.focus());
+  toastTimer = window.setTimeout(() => {
+    toast.classList.remove('show');
+    toast.setAttribute('aria-hidden', 'true');
+    toast.replaceChildren();
+    toastTimer = undefined;
+  }, 6000);
 }
 
 function bindActionButtons(root: ParentNode = document): void {
@@ -453,7 +463,11 @@ function bindEvents(): void {
     if (grid) grid.innerHTML = recipes.map((recipe) => recipeCard(recipe, modeFromPath())).join('');
     if (count) count.textContent = `${recipes.length} ${recipes.length === 1 ? 'recipe' : 'recipes'}`;
     if (empty) empty.hidden = recipes.length > 0;
-    grid?.querySelectorAll<HTMLAnchorElement>('a[data-link]').forEach((link) => link.addEventListener('click', (event) => { event.preventDefault(); navigate(link.pathname); }));
+    grid?.querySelectorAll<HTMLAnchorElement>('a[data-link]').forEach((link) => link.addEventListener('click', (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || link.target) return;
+      event.preventDefault();
+      navigate(link.pathname + link.search);
+    }));
   });
 
   const file = document.querySelector<HTMLInputElement>('#json-file');
@@ -484,9 +498,28 @@ function bindEvents(): void {
     const error = document.querySelector<HTMLElement>('#form-error');
     const raw = Object.fromEntries(data.entries());
     const existing = form.dataset.editId ? loadRecipes(modeFromPath()).find((recipe) => recipe.id === form.dataset.editId) : undefined;
+    let fieldToFocus: HTMLElement | null = null;
     try {
-      if (!form.checkValidity()) throw new Error('Add a title, at least one ingredient, and at least one step.');
-      if (raw.sourceUrl && !safeUrl(String(raw.sourceUrl))) throw new Error('The source URL needs to start with http:// or https://.');
+      const title = String(raw.title ?? '').trim();
+      const ingredients = String(raw.ingredients ?? '').trim();
+      const steps = String(raw.steps ?? '').trim();
+      if (!title || !ingredients || !steps) {
+        fieldToFocus = !title
+          ? form.querySelector<HTMLInputElement>('#title')
+          : !ingredients
+            ? form.querySelector<HTMLTextAreaElement>('#ingredients')
+            : form.querySelector<HTMLTextAreaElement>('#steps');
+        throw new Error('Add a title, at least one ingredient, and at least one step.');
+      }
+      if (Array.from(title).length > MAX_RECIPE_TITLE_LENGTH) {
+        fieldToFocus = form.querySelector<HTMLInputElement>('#title');
+        throw new Error(`Keep the recipe title to ${MAX_RECIPE_TITLE_LENGTH} characters or fewer.`);
+      }
+      if (raw.sourceUrl && !safeUrl(String(raw.sourceUrl))) {
+        fieldToFocus = form.querySelector<HTMLInputElement>('#sourceUrl');
+        throw new Error('The source URL needs to start with http:// or https://.');
+      }
+      if (!form.checkValidity()) throw new Error('Check the highlighted field and try again.');
       const recipe = normalizeRecipe({
         ...existing,
         id: existing?.id,
@@ -506,7 +539,7 @@ function bindEvents(): void {
       showToast(existing ? 'Recipe saved.' : 'Recipe added.');
     } catch (caught) {
       if (error) error.textContent = caught instanceof Error ? caught.message : 'This recipe could not be saved. Check the fields and try again.';
-      form.querySelector<HTMLElement>(':invalid')?.focus();
+      (fieldToFocus ?? form.querySelector<HTMLElement>(':invalid'))?.focus();
     }
   });
 }

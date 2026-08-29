@@ -24,7 +24,11 @@ describe('static deployment policy', () => {
     expect(config.routes).toContainEqual({ route: '/recipe', rewrite: '/recipe/index.html' });
     expect(config.routes.some((route) => route.route.includes('*recipe'))).toBe(false);
     expect(config.responseOverrides['404']).toEqual({ rewrite: '/404.html', statusCode: 404 });
-    expect(readFileSync(resolve(process.cwd(), 'public/404.html'), 'utf8')).toContain('Return home');
+    const notFound = readFileSync(resolve(process.cwd(), 'public/404.html'), 'utf8');
+    expect(notFound).toContain('Return home');
+    expect(notFound).toContain('<main id="main" tabindex="-1">');
+    expect(notFound).toContain('<h1>Page not found.</h1>');
+    expect(notFound).not.toContain('This recipe card slipped away.');
   });
 
   it('lists every crawlable static route in the sitemap', () => {

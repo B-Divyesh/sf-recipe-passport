@@ -10,6 +10,24 @@ const recipeTitles: Record<string, string> = {
   '/demo/recipe/sample-noodle-salad': 'Cold sesame noodle salad',
 };
 
+const MAX_DOCUMENT_TITLE_LENGTH = 60;
+const MAX_META_DESCRIPTION_LENGTH = 155;
+
+function clipText(value: string, maxLength: number): string {
+  const characters = Array.from(value.trim().replace(/\s+/g, ' '));
+  if (characters.length <= maxLength) return characters.join('');
+  return `${characters.slice(0, maxLength - 1).join('').trimEnd()}…`;
+}
+
+export function recipeDocumentTitle(recipeTitle: string): string {
+  const suffix = ' — Recipe Passport';
+  return `${clipText(recipeTitle, MAX_DOCUMENT_TITLE_LENGTH - suffix.length)}${suffix}`;
+}
+
+function recipeDescription(recipeTitle: string): string {
+  return clipText(`Ingredients and method for ${recipeTitle}.`, MAX_META_DESCRIPTION_LENGTH);
+}
+
 export const staticRouteMetadata: Record<string, RouteMetadata> = {
   '/': {
     title: 'Recipe Passport — Keep recipes offline',
@@ -62,8 +80,8 @@ export const staticRouteMetadata: Record<string, RouteMetadata> = {
     canonicalPath: '/404',
   },
   ...Object.fromEntries(Object.entries(recipeTitles).map(([path, title]) => [path, {
-    title: `${title} — Recipe Passport`,
-    description: `Ingredients and method for ${title}.`,
+    title: recipeDocumentTitle(title),
+    description: recipeDescription(title),
     canonicalPath: path,
   }])),
 };
@@ -72,8 +90,8 @@ export function metadataForPath(path: string, recipeTitle?: string, recipeCanoni
   const normalized = path.replace(/\/$/, '') || '/';
   if (recipeTitle && (normalized === '/recipe' || normalized === '/demo/recipe')) {
     return {
-      title: `${recipeTitle} — Recipe Passport`,
-      description: `Ingredients and method for ${recipeTitle}.`,
+      title: recipeDocumentTitle(recipeTitle),
+      description: recipeDescription(recipeTitle),
       canonicalPath: recipeCanonicalPath ?? normalized,
     };
   }
@@ -81,8 +99,8 @@ export function metadataForPath(path: string, recipeTitle?: string, recipeCanoni
   if (known) return known;
   if (recipeTitle) {
     return {
-      title: `${recipeTitle} — Recipe Passport`,
-      description: `Ingredients and method for ${recipeTitle}.`,
+      title: recipeDocumentTitle(recipeTitle),
+      description: recipeDescription(recipeTitle),
       canonicalPath: normalized,
     };
   }
