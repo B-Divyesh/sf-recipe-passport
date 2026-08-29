@@ -8,6 +8,7 @@
 - The query entry redirects to `/demo` before the sample cookbook is used.
 
 The first click from the landing page is **Try it with sample data**. Its `/?demo=1` link opens the populated cookbook without an account or setup.
+The `demo-one-click` claim test starts with fresh browser storage and proves the route, banner, controls, three named recipes, reset, exit, and real-data isolation.
 
 ## Sample data
 

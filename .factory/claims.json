@@ -56,11 +56,18 @@
     "sandbox": "fresh browser context; monitor the full demo flow; assert every request is same-origin and real storage stays empty"
   },
   {
+    "id": "demo-one-click",
+    "claim": "One click opens an isolated demo with three sample recipes and controls to reset or start for real.",
+    "where": "landing page, demo banner, README",
+    "test": "npm test -- --grep @claim:demo-one-click",
+    "sandbox": "fresh browser context; follow /?demo=1; assert /demo, the persistent banner, Reset demo, Start for real, and all three named sample recipes; reset and exit while preserving seeded real data"
+  },
+  {
     "id": "demo-isolation",
     "claim": "Demo changes use separate session storage and are discarded when demo mode ends.",
     "where": "demo banner, privacy page, README",
     "test": "npm test -- --grep @claim:demo-isolation",
-    "sandbox": "demo entry point; change demo storage; choose Start for real; assert demo and real storage are empty"
+    "sandbox": "fresh browser context with a seeded real-cookbook sentinel; change demo storage; choose Start for real; assert the demo key is removed and the real value is byte-for-byte unchanged"
   },
   {
     "id": "free-use",

@@ -31,6 +31,21 @@ try {
   });
 
   await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+  await page.getByRole('heading', { level: 2, name: 'Recipe preview' }).waitFor();
+  await page.getByRole('heading', { level: 2, name: 'Import, find, and export recipes in three steps.' }).waitFor();
+  await page.getByRole('heading', { level: 3, name: 'Find and cook recipes' }).waitFor();
+  for (const text of ['Privacy and account limits', 'Private cookbook stored in your browser.']) {
+    await page.getByText(text).waitFor();
+  }
+  for (const removed of [
+    'Your recipes, packed for the next kitchen.',
+    'Read the recipe, not the page around it.',
+    'Carry recipes across in three steps.',
+    'A tool, not another platform',
+    'Keep recipes. Keep control.',
+  ]) {
+    if (await page.getByText(removed, { exact: true }).count()) throw new Error(`Removed landing copy is still present: ${removed}`);
+  }
   const firstScreen = [
     page.getByRole('heading', { level: 1 }),
     page.getByText('For cooks leaving an app or cluttered recipe page, it keeps a searchable copy on this device.'),
@@ -58,6 +73,11 @@ try {
   await demoLink.click();
   await page.waitForURL(`${base}/demo`);
   await page.getByText('Demo — sample data, nothing is saved to your cookbook.').waitFor();
+  await page.getByRole('button', { name: 'Reset demo' }).waitFor();
+  await page.getByRole('button', { name: 'Start for real' }).waitFor();
+  for (const title of ['Tomato-braised butter beans', 'Lemon olive oil cake', 'Cold sesame noodle salad']) {
+    await page.getByRole('heading', { name: title }).waitFor();
+  }
   await page.getByLabel('Search your cookbook').fill('tahini');
   await page.getByRole('button', { name: 'Reset demo' }).click();
   if (await page.getByLabel('Search your cookbook').inputValue() !== '') throw new Error('Reset demo did not clear search.');

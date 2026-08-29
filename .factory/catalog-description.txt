@@ -1,1 +1,1 @@
-Move recipes into a private cookbook you can search, print, and export.
+Import, search, print, and export recipes in a private cookbook stored in your browser.

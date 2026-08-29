@@ -90,7 +90,7 @@ function footer(): string {
   return `
     <footer class="site-footer">
       <div>
-        <a class="footer-brand" href="/" data-link>${logo}<span>Keep recipes. Keep control.</span></a>
+        <a class="footer-brand" href="/" data-link>${logo}<span>Private cookbook stored in your browser.</span></a>
         <p>Artwork generated for Recipe Passport. No tracking. No fonts load from other sites.</p>
       </div>
       <nav aria-label="Footer navigation">
@@ -150,13 +150,12 @@ function landing(): string {
         <span class="paper-tab tab-one" aria-hidden="true"></span>
         <span class="paper-tab tab-two" aria-hidden="true"></span>
         <span class="paper-tab tab-three" aria-hidden="true"></span>
-        <p class="art-caption">Your recipes, packed for the next kitchen.</p>
       </div>
     </section>
     <section class="preview-section" aria-labelledby="preview-title">
       <div class="section-heading">
         <p class="eyebrow">The product</p>
-        <h2 id="preview-title">Read the recipe, not the page around it.</h2>
+        <h2 id="preview-title">Recipe preview</h2>
       </div>
       <div class="recipe-preview">
         <div class="preview-index" aria-hidden="true"><span>03 recipes</span><span>B / 01</span></div>
@@ -174,17 +173,17 @@ function landing(): string {
     <section class="how-section" aria-labelledby="how-title">
       <div class="section-heading narrow">
         <p class="eyebrow">How it works</p>
-        <h2 id="how-title">Carry recipes across in three steps.</h2>
+        <h2 id="how-title">Import, find, and export recipes in three steps.</h2>
       </div>
       <ol class="steps-list">
         <li><span>01</span><div><h3>Import recipes</h3><p>Choose a Paprika JSON file or paste one full recipe.</p></div></li>
-        <li><span>02</span><div><h3>Cook</h3><p>Search by title or ingredient. Open a clean cooking view.</p></div></li>
+        <li><span>02</span><div><h3>Find and cook recipes</h3><p>Search by title or ingredient. Open a clean cooking view.</p></div></li>
         <li><span>03</span><div><h3>Print or export your cookbook</h3><p>Print one recipe or export the whole cookbook as JSON.</p></div></li>
       </ol>
     </section>
     <section class="limits-section" aria-labelledby="limits-title">
       <div>
-        <p class="eyebrow">A tool, not another platform</p>
+        <p class="eyebrow">Privacy and account limits</p>
         <h2 id="limits-title">Your cookbook does not need an account.</h2>
       </div>
       <div class="limits-copy">

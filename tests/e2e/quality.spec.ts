@@ -24,11 +24,30 @@ test('serves a real styled HTTP 404 with a working return path', async ({ page }
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('This recipe card slipped away.');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('main')).toHaveCount(1);
+  await expect(page.getByText('Private cookbook stored in your browser.')).toBeVisible();
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations.filter((violation) => ['serious', 'critical'].includes(violation.impact ?? ''))).toEqual([]);
   await page.getByRole('link', { name: 'Return home' }).click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Move your recipes into a private cookbook.');
+});
+
+test('uses plain, descriptive landing headings and footer copy', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 2, name: 'Recipe preview' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Import, find, and export recipes in three steps.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 3, name: 'Find and cook recipes' })).toBeVisible();
+  await expect(page.getByText('Privacy and account limits')).toBeVisible();
+  await expect(page.getByText('Private cookbook stored in your browser.')).toBeVisible();
+  for (const removed of [
+    'Your recipes, packed for the next kitchen.',
+    'Read the recipe, not the page around it.',
+    'Carry recipes across in three steps.',
+    'A tool, not another platform',
+    'Keep recipes. Keep control.',
+  ]) {
+    await expect(page.getByText(removed, { exact: true })).toHaveCount(0);
+  }
 });
 
 test('returns HTTP 404 and not-found metadata for unknown recipe URL paths', async ({ page }) => {
@@ -74,19 +93,31 @@ test('serves and maintains route-accurate share metadata', async ({ page }) => {
   }
 });
 
-test('opens the isolated query demo in one click and can reset it', async ({ page }) => {
+test('@claim:demo-one-click opens a populated isolated demo in one click', async ({ page }) => {
+  const realSentinel = JSON.stringify([{ id: 'real-demo-claim', title: 'Keep this real recipe' }]);
   await page.goto('/');
+  await page.evaluate((value) => localStorage.setItem('recipe-passport:v1:recipes', value), realSentinel);
   const action = page.getByRole('link', { name: 'Try it with sample data' });
   await expect(action).toHaveAttribute('href', '/?demo=1');
   await action.click();
   await expect(page).toHaveURL(/\/demo$/);
   await expect(page.getByText('Demo — sample data, nothing is saved to your cookbook.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Reset demo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start for real' })).toBeVisible();
+  for (const title of ['Tomato-braised butter beans', 'Lemon olive oil cake', 'Cold sesame noodle salad']) {
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+  }
   await page.getByLabel('Search your cookbook').fill('tahini');
   await expect(page.getByText('1 recipe')).toBeVisible();
   await page.getByRole('button', { name: 'Reset demo' }).click();
   await expect(page.getByText('3 recipes')).toBeVisible();
   await expect(page.getByLabel('Search your cookbook')).toHaveValue('');
-  expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBe(realSentinel);
+  await page.getByRole('button', { name: 'Start for real' }).click();
+  await expect(page).toHaveURL(/\/add$/);
+  await expect(page.getByText('Demo — sample data, nothing is saved to your cookbook.')).toHaveCount(0);
+  expect(await page.evaluate(() => sessionStorage.getItem('demo:recipe-passport:v1:recipes'))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem('recipe-passport:v1:recipes'))).toBe(realSentinel);
 });
 
 test('keeps the action outcome and all three facts in the desktop first screen', async ({ page }) => {
